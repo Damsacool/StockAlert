@@ -14,7 +14,7 @@ import FilterButtons from './components/Common/FilterButtons';
 import ExportButton from './components/Common/ExportButton';
 import {exportToExcel, exportSummaryReport} from './utils/exportToExcel'
 import SalesDashboard from './components/Layout/SalesDashboard';
-import SortDropdown from './components/Common/SortDropdown';
+import TransactionHistory from './components/Layout/TransactionHistory'
 
 function App() {
   const {
@@ -269,6 +269,9 @@ function App() {
 
         {/* Sales Dashboard */}
         {products.length > 0 && <SalesDashboard products={products} />}
+
+        {/* Transaction History */}
+        {products.length > 0 && <TransactionHistory products={products} />}
 
         {/*Search, Filter & Sort */}
         {products.length > 0 && (
