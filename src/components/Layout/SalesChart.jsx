@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { TrendingUp, DollarSign } from 'lucide-react';
 import { getAllTransactions } from '../../utils/db';
@@ -8,30 +8,11 @@ const SalesChart = ({ products }) => {
   const [chartType, setChartType] = useState('daily'); 
   const [timeRange, setTimeRange] = useState('week');
 
-  useEffect(() => {
-    loadChartData();
-  }, [timeRange, products]);
-
-  const loadChartData = async () => {
-    try {
-      const transactions = await getAllTransactions();
-      
-      if (chartType === 'daily') {
-        generateDailyChart(transactions);
-      } else {
-        generateProductChart(transactions);
-      }
-    } catch (error) {
-      console.error('Failed to load chart data:', error);
-    }
-  };
-
-  const generateDailyChart = (transactions) => {
+  const generateDailyChart = useCallback((transactions) => {
     const days = timeRange === 'week' ? 7 : 30;
     const now = new Date();
     const data = [];
 
-    // Generate last N days
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
@@ -57,9 +38,9 @@ const SalesChart = ({ products }) => {
     }
 
     setChartData(data);
-  };
+  }, [timeRange, products]);
 
-  const generateProductChart = (transactions) => {
+  const generateProductChart = useCallback((transactions) => {
     const salesByProduct = {};
 
     transactions.forEach(t => {
@@ -86,7 +67,25 @@ const SalesChart = ({ products }) => {
       }));
 
     setChartData(data);
-  };
+  }, [products]);
+
+  const loadChartData = useCallback(async () => {
+    try {
+      const transactions = await getAllTransactions();
+      
+      if (chartType === 'daily') {
+        generateDailyChart(transactions);
+      } else {
+        generateProductChart(transactions);
+      }
+    } catch (error) {
+      console.error('Failed to load chart data:', error);
+    }
+  }, [chartType, generateDailyChart, generateProductChart]);
+
+  useEffect(() => {
+    loadChartData();
+  }, [loadChartData]);
 
   const CustomTooltip = ({ active, payload }) => {
     if (!active || !payload || !payload.length) return null;
@@ -141,7 +140,6 @@ const SalesChart = ({ products }) => {
         <h2>Tendances & Analyses</h2>
 
         <div className="chart-controls">
-          {/* Chart Type Toggle */}
           <div className="chart-type-buttons">
             <button
               className={`chart-type-btn ${chartType === 'daily' ? 'active' : ''}`}
@@ -157,7 +155,6 @@ const SalesChart = ({ products }) => {
             </button>
           </div>
 
-          {/* Time Range (only for daily) */}
           {chartType === 'daily' && (
             <div className="time-range-buttons">
               <button

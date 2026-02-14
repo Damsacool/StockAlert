@@ -40,10 +40,11 @@ function App() {
   React.useEffect(() => {
     const lowstockProducts = products.filter(p => p.stock <= p.minStock);
 
-    if (lowstockProducts.length) {
+    if (lowstockProducts.length > 0) {
       requestPermission();
+      sendLowStockAlert(lowstockProducts);
     }
-  }, [products, requestPermission]);
+  }, [products, requestPermission, sendLowStockAlert]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
