@@ -10,7 +10,7 @@ const SalesChart = ({ products }) => {
 
   useEffect(() => {
     loadChartData();
-  }, [chartType, timeRange, products]);
+  }, [timeRange, products]);
 
   const loadChartData = async () => {
     try {

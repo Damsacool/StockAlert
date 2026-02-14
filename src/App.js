@@ -34,7 +34,7 @@ function App() {
 
   const {
     requestPermission,
-    sendLowStockALert
+    sendLowStockAlert
   } = useNotifications();
 
   React.useEffect(() => {
