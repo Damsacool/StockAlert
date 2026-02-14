@@ -17,6 +17,10 @@ import TransactionHistory from './components/Layout/TransactionHistory'
 import SalesChart from './components/Layout/SalesChart';
 import TabNavigation from './components/Layout/TabNavigation';
 import PrintReports from './components/Layout/PrintReports';
+import InstallPrompt from './components/Common/InstallPrompt';
+import OfflineIndicator from './components/Common/OfflineIndicator';
+import { useNotifications } from './hooks/useNotifications';
+
 
 function App() {
   const {
@@ -27,6 +31,19 @@ function App() {
     updateImages,
     removeProduct
   } = useProducts();
+
+  const {
+    requestPermission,
+    sendLowStockALert
+  } = useNotifications();
+
+  React.useEffect(() => {
+    const lowstockProducts = products.filter(p => p.stock <= p.minStock);
+
+    if (lowstockProducts.length) {
+      requestPermission();
+    }
+  }, [products, requestPermission]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -220,6 +237,9 @@ function App() {
 
   return (
     <div className='app'>
+        <OfflineIndicator />
+        <InstallPrompt />
+      
       <header className="app-header">
         <div className="header-content">
           <Package size={32} />
