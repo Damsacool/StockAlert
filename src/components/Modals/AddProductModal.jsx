@@ -125,7 +125,6 @@ const AddProductModal = ({
                       <input
                         type='file'
                         accept='image/*'
-                        capture='environment'
                         onChange={(e) => onImageUpload(index, e.target.files[0])}
                         style={{ display: 'none' }}
                       />
