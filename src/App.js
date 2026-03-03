@@ -25,12 +25,14 @@ import { processSyncQueue } from './utils/db';
 import { useAuth } from './contexts/AuthContext';
 import LoginScreen from './components/Auth/LoginScreen';
 import AddWorkerModal from './components/Auth/AddWorkerModal';
+import { LogOut } from 'lucide-react';
 
 function App() {
   const { 
     user, 
     profile,
-    loading 
+    loading,
+    signOut 
   } = useAuth();
   console.log('Profile:', profile);
 
@@ -339,6 +341,31 @@ if (!user) {
         Ajouter travailleur
       </button>
     )}
+
+    {/* Logout button */}
+          <button
+            onClick={async () => {
+              if (window.confirm('Se déconnecter?')) {
+              await signOut();
+              window.location.reload();
+          }
+    }}
+          style={{
+          padding: '8px 16px',
+          background: '#64748b',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}
+        > 
+        <LogOut size={18} />
+          Déconnexion
+        </button> 
 
           <RestoreButton onRestoreComplete={() => window.location.reload()} /> 
 
