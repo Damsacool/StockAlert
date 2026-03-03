@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-globals */
 // StockAlert Service Worker - Offline First
-const CACHE_NAME = 'stockalert-v3';
+const CACHE_NAME = 'stockalert-v4';
 
 // Files to cache on install
 const PRECACHE_URLS = [
