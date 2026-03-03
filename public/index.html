@@ -31,36 +31,30 @@
 
     <!-- Service Worker Registration -->
     <script>
-     if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
         console.log('[PWA] Service Worker registered!');
         
-        // Check for updates every 60 seconds
-        setInterval(() => {
-          registration.update();
-        }, 60000);
+        // Check for updates immediately
+        registration.update();
         
-        // Listen for updates
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'activated') {
-              // New version available, reload
-              if (confirm('Nouvelle version disponible! Recharger?')) {
-                window.location.reload();
-              }
-            }
-          });
+        // Auto-reload when new version activates
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       })
-        .catch((error) => {
-              console.error('[PWA] Service Worker failed:', error);
-            });
-        });
-      }
+      .catch((error) => {
+        console.error('[PWA] Service Worker failed:', error);
+      });
+  });
+}
     </script>
   </body>
 </html>
