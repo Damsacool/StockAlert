@@ -12,15 +12,37 @@ const AddProductModal = ({
   if (!show) return null;
 
   return (
-    <div className='modal-overlay' onClick={onClose}>
-      <div className='modal-content' onClick={(e) => e.stopPropagation()}>
-        <div className='modal-header'>
-          <h2>Nouveau Produit</h2>
-          <button className='modal-close' onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
+    <div 
+  className='modal-overlay' 
+  onClick={onClose}
+  style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.7)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    padding: '20px'
+  }}
+>
+  <div 
+    className='modal-content' 
+    onClick={(e) => e.stopPropagation()}
+    style={{
+      background: 'var(--surface)',
+      borderRadius: '16px',
+      padding: '24px',
+      maxWidth: '500px',
+      width: '100%',
+      maxHeight: '90vh',
+      overflowY: 'auto',
+      boxShadow: 'var(--shadow-lg)'
+    }}
+  >
         <div className='modal-body'>
           <div className='form-group'>
             <label>Nom du Produit *</label>
@@ -31,6 +53,15 @@ const AddProductModal = ({
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               autoFocus
+              style={{
+    width: '100%',
+    padding: '12px',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    fontSize: '15px'
+  }}
             />
           </div>
 
@@ -43,6 +74,15 @@ const AddProductModal = ({
                 placeholder='50'
                 value={formData.stock}
                 onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                style={{
+    width: '100%',
+    padding: '12px',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    fontSize: '15px'
+  }}
               />
             </div>
 
@@ -54,6 +94,15 @@ const AddProductModal = ({
                 placeholder='10'
                 value={formData.minStock}
                 onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
+                style={{
+    width: '100%',
+    padding: '12px',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    fontSize: '15px'
+  }}
               />
             </div>
           </div>
@@ -67,6 +116,15 @@ const AddProductModal = ({
                     placeholder='5000'
                     value={formData.costPrice}
                     onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    style={{
+    width: '100%',
+    padding: '12px',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    fontSize: '15px'
+  }}
                     />
             </div>
 
@@ -78,6 +136,15 @@ const AddProductModal = ({
                     placeholder='7500'
                     value={formData.sellingPrice}
                     onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+                    style={{
+    width: '100%',
+    padding: '12px',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    fontSize: '15px'
+  }}
                     />
             </div>
           </div>

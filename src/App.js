@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Plus, Package, UserPlus } from 'lucide-react';
 import { useProducts } from './hooks/useProducts';
 import LoadingScreen from './components/Common/LoadingScreen'
-import ProductCard from './components/Product Features/ProductCard';
 import AddProductModal from './components/Modals/AddProductModal';
 import BulkEditModal from './components/Modals/BulkEditModal';
 import ImageEditorModal from './components/Modals/ImageEditorModal';
+import CompactProductCard from './components/ProductFeatures/CompactProductCard';
+import HamburgerMenu from './components/Common/HamburgerMenu';
 import './styles/App.css';
 import { clearAllProducts } from './utils/db';
 import AnalyticsSummary from './components/Layout/AnalyticsSummary'; 
@@ -15,7 +16,6 @@ import {exportToExcel, exportSummaryReport} from './utils/exportToExcel'
 import SalesDashboard from './components/Layout/SalesDashboard';
 import TransactionHistory from './components/Layout/TransactionHistory'
 import SalesChart from './components/Layout/SalesChart';
-import TabNavigation from './components/Layout/TabNavigation';
 import PrintReports from './components/Layout/PrintReports';
 import InstallPrompt from './components/Common/InstallPrompt';
 import OfflineIndicator from './components/Common/OfflineIndicator';
@@ -26,30 +26,19 @@ import { useAuth } from './contexts/AuthContext';
 import LoginScreen from './components/Auth/LoginScreen';
 import AddWorkerModal from './components/Auth/AddWorkerModal';
 import { LogOut } from 'lucide-react';
+import './styles/themes.css';
+import { useTheme } from './hooks/useTheme';
+import BottomNavigation from './components/Common/BottomNavigation';
 
 function App() {
-  const { 
-    user, 
-    profile,
-    loading,
-    signOut 
-  } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   console.log('Profile:', profile);
 
-  const {
-    products,
-    isLoading,
-    addNewProduct,
-    updateStock, 
-    updateImages,
-    removeProduct
-  } = useProducts();
+  const { products, isLoading, addNewProduct, updateStock, updateImages, removeProduct } = useProducts();
 
-  const {
-    permission,
-    requestPermission,
-    sendLowStockAlert
-  } = useNotifications();
+  const { permission, requestPermission, sendLowStockAlert } = useNotifications();
+
+  const { theme, toggleTheme } = useTheme();
 
   // Check for low stock and schedule daily reminders
   React.useEffect(() => {
@@ -312,100 +301,74 @@ if (!user) {
         <OfflineIndicator />
         <InstallPrompt />
       
-      <header className="app-header">
-        <div className="header-content">
-          <Package size={32} />
-          <div>
-            <h1>StockAlert</h1>
-            <p>Pièces de rechange</p>
-          </div>
+   <header className="app-header">
+  <div className="header-content">
+    {/* Hamburger Menu */}
+    <HamburgerMenu
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      userRole={profile?.role}
+      onAddWorker={() => setShowAddWorkerModal(true)}
+      onRestore={() => window.location.reload()}
+      onLogout={async () => {
+        if (window.confirm('Se déconnecter?')) {
+          await signOut();
+          window.location.reload();
+        }
+      }}
+      theme={theme}
+      onThemeToggle={toggleTheme}
+    />
 
-           {/* Worker button - only for owners */}
-      {profile?.role === 'owner' && (
-       <button
-        onClick={() => setShowAddWorkerModal(true)}
+    {/* App Title */}
+    <div className="header-title">
+      <Package size={28} />
+      <div>
+        <h1>StockAlert</h1>
+        <p>Inventaire</p>
+      </div>
+    </div>
+
+    {/* Right Side: Badge + Logout */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="user-badge">
+        <span className="user-role">{profile?.role === 'owner' ? 'Propriétaire' : 'Travailleur'}</span>
+      </div>
+      
+      <button
+        onClick={async () => {
+          if (window.confirm('Se déconnecter?')) {
+            await signOut();
+            window.location.reload();
+          }
+        }}
         style={{
-          padding: '8px 16px',
-          background: '#10b981',
-          color: 'white',
-          border: 'none',
+          padding: '8px 12px',
           borderRadius: '8px',
+          border: 'none',
+          background: 'var(--danger-light)',
+          color: 'var(--danger)',
+          fontSize: '13px',
+          fontWeight: '600',
           cursor: 'pointer',
-          fontSize: '14px',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px'
+          gap: '6px',
+          whiteSpace: 'nowrap'
         }}
       >
-        <UserPlus size={18} />
-        Ajouter travailleur
+        <LogOut size={16} />
+        <span style={{ display: 'none' }}>Déconnexion</span>
       </button>
-    )}
-
-    {/* Logout button */}
-          <button
-            onClick={async () => {
-              if (window.confirm('Se déconnecter?')) {
-              await signOut();
-              window.location.reload();
-          }
-    }}
-          style={{
-          padding: '8px 16px',
-          background: '#64748b',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}
-        > 
-        <LogOut size={18} />
-          Déconnexion
-        </button> 
-
-          <RestoreButton onRestoreComplete={() => window.location.reload()} /> 
-
-          {profile?.role === 'owner' && ( 
-          <button 
-            onClick={async () => {
-              if (window.confirm('Reset database?')) {
-                await clearAllProducts();
-                window.location.reload();
-              }
-            }}
-            style={{ 
-              marginLeft: 'auto', 
-              padding: '8px 16px', 
-              background: '#ef4444', 
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            Reset DB
-          </button>
-          )}
-        </div>
-      </header>
-
-      {/* Tab Navigation */}
-      <TabNavigation activeTab={activeTab} onChange={setActiveTab} />
+    </div>
+  </div>
+</header>
 
       <div className='container'>
         {/* TAB 1: INVENTAIRE */}
         {activeTab === 'inventory' && (
-          <>
-            <button className='btn-add-product' onClick={() => setShowAddModal(true)}>
-              <Plus size={24} />
-              <span>Ajouter Nouveau Produit</span>
-            </button>
-
-            {products.length > 0 && <AnalyticsSummary products={products} />}
+  <>
+    {products.length > 0 && <AnalyticsSummary products={products} />}
 
             {products.length > 0 && (
               <>
@@ -440,7 +403,7 @@ if (!user) {
                 </div>
               ) : (
                 filteredProducts.map(product => (
-                  <ProductCard
+                  <CompactProductCard
                     key={product.id}
                     product={product}
                     onStockChange={handleStockChange}
@@ -551,6 +514,14 @@ if (!user) {
         onWorkerAdded={() => {
           alert('Travailleur ajouté avec succès!');
         }}
+      />
+
+      {/* BOTTOM NAVIGATION */}
+      <BottomNavigation
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onAddProduct={() => setShowAddModal(true)}
+        userRole={profile?.role}
       />
     </div>
   );

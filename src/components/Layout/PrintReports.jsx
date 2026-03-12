@@ -1,5 +1,6 @@
 import React from 'react';
 import { Printer, AlertTriangle, Download } from 'lucide-react';
+import './PrintReports.css';
 
 const PrintReports = ({ products, onExport, onExportSummary }) => {
     const lowStockProducts = products.filter(p => p.stock <= p.minStock);
@@ -356,26 +357,26 @@ const PrintReports = ({ products, onExport, onExportSummary }) => {
     <div className="print-reports-container">
       <div className="reports-header">
         <div className="reports-title-section">
-          <h2><Printer size={24} className="report-icon" /> Rapports & Impressions</h2>
+          <h2><Printer size={24} className="report-icon" style={{ textAlign: 'center' }} /> Rapports & Impressions</h2>
           <p>Générez et imprimez vos rapports d'inventaire</p>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="reports-stats-bar">
-        <div className="stat-pill">
-          <span className="stat-label">Total Produits:</span>
-          <span className="stat-value">{products.length}</span>
-        </div>
-        <div className="stat-pill alert">
-          <span className="stat-label">Stock Bas:</span>
-          <span className="stat-value">{lowStockProducts.length}</span>
-        </div>
-        <div className="stat-pill">
-          <span className="stat-label">Valeur Totale:</span>
-          <span className="stat-value">{totalInventoryValue.toLocaleString()} CFA</span>
-        </div>
-      </div>
+<div className="reports-stats-grid">
+  <div className="stat-pill">
+    <span className="stat-label">Total Produits</span>
+    <span className="stat-value">{products.length}</span>
+  </div>
+  <div className="stat-pill alert">
+    <span className="stat-label">Stock Bas</span>
+    <span className="stat-value">{lowStockProducts.length}</span>
+  </div>
+  <div className="stat-pill success">
+    <span className="stat-label">Valeur Totale</span>
+    <span className="stat-value">{totalInventoryValue.toLocaleString()} F</span>
+  </div>
+</div>
 
       {/* Reports Grid */}
       <div className="reports-grid-modern">

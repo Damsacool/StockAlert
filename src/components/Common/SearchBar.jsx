@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, X, ArrowUpDown } from 'lucide-react';
+import './SearchBar.css';
 
 const SearchBar = ({ value, onChange, onClear, sortBy, onSortChange }) => {
   const sortOptions = [
