@@ -1,13 +1,22 @@
 import React, { useState } from 'react';
 import { Plus, Minus, ChevronDown, ChevronUp, Trash2, Image as ImageIcon } from 'lucide-react';
+import ImageZoomModal from '../Modals/ImageZoomModal';
 import './CompactProductCard.css';
 
 const CompactProductCard = ({ product, onStockChange, onEdit, onDelete, userRole }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showImageZoom, setShowImageZoom] = useState(false);
+  const [zoomImageIndex, setZoomImageIndex] = useState(0);
+
   console.log('Product:', product);
   const isLowStock = product.stock <= product.minStock;
   const profit = product.sellingPrice - product.costPrice;
   const profitMargin = ((profit / product.costPrice) * 100).toFixed(1);
+
+  const handleImageClick = (index) => {
+    setZoomImageIndex(index);
+    setShowImageZoom(true);
+  };
 
   return (
     <div className="compact-card">
@@ -49,10 +58,25 @@ const CompactProductCard = ({ product, onStockChange, onEdit, onDelete, userRole
           {product.images && product.images.length > 0 && (
             <div className="compact-images">
               {product.images.slice(0, 2).map((img, idx) => (
-                <img key={idx} src={img} alt={`${product.name} ${idx + 1}`} className="compact-img" />
+                <img
+                  key={idx}
+                  src={img}
+                  alt={`${product.name} ${idx + 1}`}
+                  className="compact-img"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleImageClick(idx)}
+                  title="Click to zoom"
+                />
               ))}
               {product.images.length > 2 && (
-                <div className="compact-img-more">+{product.images.length - 2}</div>
+                <div
+                  className="compact-img-more"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleImageClick(2)}
+                  title="Click to zoom"
+                >
+                  +{product.images.length - 2}
+                </div>
               )}
             </div>
           )}
@@ -114,6 +138,15 @@ const CompactProductCard = ({ product, onStockChange, onEdit, onDelete, userRole
             )}
           </div>
         </div>
+      )}
+
+      {/* Image Zoom Modal */}
+      {showImageZoom && product.images && product.images.length > 0 && (
+        <ImageZoomModal
+          images={product.images}
+          initialIndex={zoomImageIndex}
+          onClose={() => setShowImageZoom(false)}
+        />
       )}
     </div>
   );

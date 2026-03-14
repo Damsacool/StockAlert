@@ -1,19 +1,27 @@
 import { useState, useEffect } from 'react';
 import * as db from '../utils/db';
+import { useAuth } from '../contexts/AuthContext';
 
 
 export const useProducts = () => {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Initialize database and load products
+  // Initialize database and load products for current user
   useEffect(() => {
     const initApp = async () => {
       try {
         await db.initDB();
-        const loadedProducts = await db.getAllProducts();
-        setProducts(loadedProducts || []);
+        
+        // Load products for the current user only
+        if (user?.id) {
+          const loadedProducts = await db.getProductsForUser(user.id);
+          setProducts(loadedProducts || []);
+        } else {
+          setProducts([]);
+        }
         } catch (err) {
         console.error('Failed to initialize:', err);
         setError(err.message);
@@ -23,12 +31,12 @@ export const useProducts = () => {
     };
 
     initApp();
-    }, []);
+    }, [user?.id]);
 
   // Add new product
   const addNewProduct = async (productData) => {
     try {
-      // Create complete product object with ID
+      // Get current user
       const newProduct = {
         id: Date.now(),
         name: productData.name || '',
@@ -36,10 +44,11 @@ export const useProducts = () => {
         minStock: Number(productData.minStock) || 0,
         costPrice: Number(productData.costPrice) || 0,
         sellingPrice: Number(productData.sellingPrice) || 0,
-        images: Array.isArray(productData.images) ? productData.images : []
+        images: Array.isArray(productData.images) ? productData.images : [],
+        created_by: user?.id
       };
 
-      console.log('Adding product:', newProduct); // Debug log
+      console.log('Adding product:', newProduct); 
 
       // Add to IndexedDB
       await db.addProduct(newProduct);

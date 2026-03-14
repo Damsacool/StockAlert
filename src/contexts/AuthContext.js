@@ -43,26 +43,30 @@ export const AuthProvider = ({ children }) => {
 
  const loadProfile = async (userId) => {
   try {
-    // Try direct query (RLS is disabled)
-    const { data: profileData, error: profileError } = await supabase
+    console.log('Loading profile for user:', userId);
+    
+    const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
-    if (profileError) {
-      console.error('Profile query error:', profileError);
+    if (error) {
+      console.error('Profile load error:', error);
       setProfile(null);
       setLoading(false);
-      return;
+      return null;
     }
-    
-    setProfile(profileData);
+
+    console.log('Profile loaded:', data);
+    setProfile(data);
     setLoading(false);
-  } catch (error) {
-    console.error('Error loading profile:', error);
+    return data;
+  } catch (err) {
+    console.error('Profile fetch failed:', err);
     setProfile(null);
     setLoading(false);
+    return null;
   }
 };
 
@@ -75,28 +79,42 @@ export const AuthProvider = ({ children }) => {
     return { data, error };
   };
 
-  const signUp = async (email, password, fullName, role = 'worker') => {
+  const signUp = async (email, password, fullName, role = 'owner', extra = {}) => {
+    // Include profile metadata in the auth user record too
     const { data: authData, error } = await supabase.auth.signUp({
       email,
-      password
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          ...extra
+        }
+      }
     });
 
     if (error) return { data: null, error };
 
-    // Create profile
+    // Create profile record in user_profiles (used by the app)
     if (authData.user) {
+      const userId = authData.user.id;
+      const profileData = {
+        id: userId,
+        email,
+        full_name: fullName,
+        role,
+        tenant_id: userId,
+        created_by: user?.id || userId,
+        ...extra
+      };
+
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert([{
-          id: authData.user.id,
-          email,
-          full_name: fullName,
-          role,
-          created_by: user?.id || authData.user.id
-        }]);
+        .insert([profileData]);
 
       if (profileError) {
         console.error('Profile creation error:', profileError);
+      } else {
+        setProfile(profileData);
       }
     }
 

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Package, UserPlus } from 'lucide-react';
+import { Package, LogOut } from 'lucide-react';
 import { useProducts } from './hooks/useProducts';
 import LoadingScreen from './components/Common/LoadingScreen'
+import CompactProductCard from './components/ProductFeatures/CompactProductCard';
 import AddProductModal from './components/Modals/AddProductModal';
 import BulkEditModal from './components/Modals/BulkEditModal';
 import ImageEditorModal from './components/Modals/ImageEditorModal';
-import CompactProductCard from './components/ProductFeatures/CompactProductCard';
-import HamburgerMenu from './components/Common/HamburgerMenu';
 import './styles/App.css';
-import { clearAllProducts } from './utils/db';
 import AnalyticsSummary from './components/Layout/AnalyticsSummary'; 
 import SearchBar from './components/Common/SearchBar';
 import FilterButtons from './components/Common/FilterButtons';
@@ -20,15 +18,14 @@ import PrintReports from './components/Layout/PrintReports';
 import InstallPrompt from './components/Common/InstallPrompt';
 import OfflineIndicator from './components/Common/OfflineIndicator';
 import { useNotifications } from './hooks/useNotifications';
-import RestoreButton from './components/Common/RestoreButton';
 import { processSyncQueue } from './utils/db';
 import { useAuth } from './contexts/AuthContext';
 import LoginScreen from './components/Auth/LoginScreen';
 import AddWorkerModal from './components/Auth/AddWorkerModal';
-import { LogOut } from 'lucide-react';
-import './styles/themes.css';
-import { useTheme } from './hooks/useTheme';
+import HamburgerMenu from './components/Common/HamburgerMenu';
 import BottomNavigation from './components/Common/BottomNavigation';
+import { useTheme } from './hooks/useTheme';
+import './styles/themes.css';
 
 function App() {
   const { user, profile, loading, signOut } = useAuth();
@@ -395,7 +392,7 @@ if (!user) {
             <div className='product-grid'>
               {filteredProducts.length === 0 ? (
                 <div className='empty-state'>
-                  <Package size={64} strokeWidth={1} />
+                  <Package size={64} strokeWidth={1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}} />
                   <p>Aucun produit trouvé</p>
                   <p className='empty-subtitle'>
                     {searchQuery ? 'Essayez un autre terme de recherche' : 'Ajoutez votre premier produit ci-dessus'}
@@ -427,7 +424,7 @@ if (!user) {
               </>
             ) : (
               <div className='empty-state'>
-                <Package size={64} strokeWidth={1} />
+                <Package size={64} strokeWidth={1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}} />
                 <p>Aucun produit</p>
                 <p className='empty-subtitle'>Ajoutez des produits dans l'onglet Inventaire</p>
               </div>
@@ -442,7 +439,7 @@ if (!user) {
               <TransactionHistory products={products} />
             ) : (
               <div className='empty-state'>
-                <Package size={64} strokeWidth={1} />
+                <Package size={64} strokeWidth={1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}} />
                 <p>Aucun produit</p>
                 <p className='empty-subtitle'>Ajoutez des produits dans l'onglet Inventaire</p>
               </div>
@@ -462,7 +459,7 @@ if (!user) {
                 />
               ) : (
                 <div className='empty-state'>
-                  <Package size={64} strokeWidth={1} />
+                  <Package size={64} strokeWidth={1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}} />
                   <p>Aucun produit</p>
                   <p className='empty-subtitle'>Ajoutez des produits dans l'onglet Inventaire</p>
                 </div>

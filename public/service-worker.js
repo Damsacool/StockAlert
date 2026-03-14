@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-globals */
 // StockAlert Service Worker - Offline First
-const CACHE_NAME = 'stockalert-v4';
+const CACHE_NAME = 'stockalert-v5';
 
 // Files to cache on install
 const PRECACHE_URLS = [
@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[SW] Caching app shell');
-      return cache.addAll(urlsToCache);
+      return cache.addAll(PRECACHE_URLS);
     }).then(() => {
       return self.skipWaiting(); 
     })
