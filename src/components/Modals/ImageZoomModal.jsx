@@ -72,7 +72,7 @@ const ImageZoomModal = ({ images, initialIndex = 0, onClose }) => {
       >
         <img
           src={images[currentIndex]}
-          alt={`Image ${currentIndex + 1}`}
+          alt={`Product view ${currentIndex + 1}`}
           style={{
             maxWidth: '100%',
             maxHeight: '85vh',

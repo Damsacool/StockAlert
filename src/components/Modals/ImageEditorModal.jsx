@@ -125,7 +125,7 @@ const ImageEditorModal = ({ show, onClose, product, setProduct, updateImages }) 
                 <>
                   <img
                     src={img}
-                    alt={`Image ${index + 1}`}
+                    alt={`Product ${index + 1}`}
                     style={{
                       position: 'absolute',
                       top: 0,

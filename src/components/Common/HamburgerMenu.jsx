@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { 
-  Menu, X, Home, Package, TrendingUp, 
+  Menu, X, Package, TrendingUp, 
   Clock, FileText, UserPlus, Download, 
-  Settings, LogOut, Moon, Sun 
+  LogOut, Moon, Sun 
 } from 'lucide-react';
 import './HamburgerMenu.css';
 
