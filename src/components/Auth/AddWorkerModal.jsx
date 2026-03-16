@@ -13,31 +13,76 @@ const AddWorkerModal = ({ show, onClose, onWorkerAdded }) => {
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    const { error: signUpError } = await signUp(
-      formData.email,
-      formData.password,
-      formData.fullName,
-      'worker'
-    );
-
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
-      return;
+  try {
+    // Store current session
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    
+    if (!currentSession) {
+      throw new Error('You must be logged in to add workers');
     }
 
-    setFormData({ email: '', password: '', fullName: '' });
-    setLoading(false);
-    onWorkerAdded();
-    alert(`Travailleur ajouté: ${formData.fullName}\nEmail: ${formData.email}\nMot de passe: ${formData.password}\n\nPartagez ces informations avec le travailleur.`);
-    onClose();
-  };
+    const ownerId = currentSession.user.id;
 
- if (!show) return null;
+    // Create worker account (will auto-login the new user - we'll revert this)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          full_name: formData.fullName
+        }
+      }
+    });
+
+    if (authError) throw authError;
+    if (!authData.user) throw new Error('Failed to create worker account');
+
+    const workerId = authData.user.id;
+
+    // Force confirm email
+    await supabase.rpc('confirm_user_email', { user_id: workerId });
+
+    // Create worker profile with owner's tenant_id
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert([{
+        id: workerId,
+        email: formData.email,
+        full_name: formData.fullName,
+        role: 'worker',
+        tenant_id: ownerId, // Worker belongs to owner's tenant
+        created_by: ownerId
+      }]);
+
+    if (profileError) throw profileError;
+
+    // CRITICAL: Restore the owner's session
+    await supabase.auth.setSession({
+      access_token: currentSession.access_token,
+      refresh_token: currentSession.refresh_token
+    });
+
+    console.log('Worker created successfully:', {
+      workerId,
+      role: 'worker',
+      tenant_id: ownerId
+    });
+
+    setFormData({ fullName: '', email: '', password: '' });
+    onWorkerAdded();
+    onClose();
+
+  } catch (err) {
+    console.error('Worker creation error:', err);
+    setError(err.message || 'Erreur lors de la création du travailleur');
+  } finally {
+    setLoading(false);
+  }
+};
 
 return (
   <div 

@@ -80,7 +80,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signUp = async (email, password, fullName, role = 'owner', extra = {}) => {
-    // Include profile metadata in the auth user record too
+  try {
+    console.log('Creating account with role:', role); 
+
     const { data: authData, error } = await supabase.auth.signUp({
       email,
       password,
@@ -94,18 +96,22 @@ export const AuthProvider = ({ children }) => {
 
     if (error) return { data: null, error };
 
-    // Create profile record in user_profiles (used by the app)
     if (authData.user) {
       const userId = authData.user.id;
+      
+      // Force confirm email
+      await supabase.rpc('confirm_user_email', { user_id: userId });
+
       const profileData = {
         id: userId,
         email,
         full_name: fullName,
-        role,
-        tenant_id: userId,
-        created_by: user?.id || userId,
-        ...extra
+        role: role, 
+        tenant_id: userId, 
+        created_by: userId
       };
+
+      console.log('Creating profile:', profileData); 
 
       const { error: profileError } = await supabase
         .from('user_profiles')
@@ -113,13 +119,16 @@ export const AuthProvider = ({ children }) => {
 
       if (profileError) {
         console.error('Profile creation error:', profileError);
-      } else {
-        setProfile(profileData);
+        return { data: null, error: profileError };
       }
     }
 
-    return { data: authData, error };
-  };
+    return { data: authData, error: null };
+  } catch (err) {
+    console.error('Signup error:', err);
+    return { data: null, error: err };
+  }
+};
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();

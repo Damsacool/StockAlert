@@ -16,34 +16,34 @@ const SignupScreen = ({ onBackToLogin }) => {
   const [error, setError] = useState('');
 
   const handleSignup = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      const { error } = await signUp(
-        formData.email,
-        formData.password,
-        formData.ownerName,
-        'owner',
-        { business_name: formData.businessName }
-      );
+  try {
+    const { error } = await signUp(
+      formData.email,
+      formData.password,
+      formData.ownerName,
+      'owner', 
+      { business_name: formData.businessName }
+    );
 
-      if (error) throw error;
+    if (error) throw error;
 
-      alert('✓ Compte créé avec succès! Connectez-vous maintenant.');
-      onBackToLogin();
-    } catch (err) {
-      console.error('Signup error:', err);
-      if (err.message && err.message.includes('already registered')) {
-        setError('Cet email est déjà utilisé. Essayez de vous connecter.');
-      } else {
-        setError(err.message || 'Erreur lors de la création du compte');
-      }
-    } finally {
-      setLoading(false);
+    alert('✓ Compte créé avec succès! Connectez-vous maintenant.');
+    onBackToLogin();
+  } catch (err) {
+    console.error('Signup error:', err);
+    if (err.message && err.message.includes('already registered')) {
+      setError('Cet email est déjà utilisé. Essayez de vous connecter.');
+    } else {
+      setError(err.message || 'Erreur lors de la création du compte');
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="login-screen">
