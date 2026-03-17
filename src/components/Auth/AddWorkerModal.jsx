@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../utils/supabase';
 
 const AddWorkerModal = ({ show, onClose, onWorkerAdded }) => {
   const { signUp } = useAuth();
