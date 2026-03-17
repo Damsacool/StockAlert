@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { X, UserPlus } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+// import { useAuth } from '../../contexts/AuthContext'; using supababse now, no need for auth context here
 import { supabase } from '../../utils/supabase';
 
 const AddWorkerModal = ({ show, onClose, onWorkerAdded }) => {
-  const { signUp } = useAuth();
+  // const { signUp } = useAuth(); using supabase directly, no need for auth context here
   const [formData, setFormData] = useState({
     email: '',
     password: '',
