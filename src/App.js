@@ -22,10 +22,11 @@ import { processSyncQueue } from './utils/db';
 import { useAuth } from './contexts/AuthContext';
 import LoginScreen from './components/Auth/LoginScreen';
 import AddWorkerModal from './components/Auth/AddWorkerModal';
-import HamburgerMenu from './components/Common/HamburgerMenu';
-import BottomNavigation from './components/Common/BottomNavigation';
+import HamburgerMenu from './components/Common/HamburgerMenu';      
+import BottomNav from './components/Common/BottomNav';
 import { useTheme } from './hooks/useTheme';
-import './styles/themes.css';
+import './themes.css';
+
 
 function App() {
   const { user, profile, loading, signOut } = useAuth();
@@ -39,64 +40,64 @@ function App() {
 
   // Check for low stock and schedule daily reminders
   React.useEffect(() => {
-  const lowstockProducts = products.filter(p => p.stock <= p.minStock);
-  
-  if (lowstockProducts.length > 0) {
-    if ( permission === 'default') {
-      requestPermission();
-    }
+    const lowstockProducts = products.filter(p => p.stock <= p.minStock);
     
-    // Schedule daily 6 PM reminder
-    const now = new Date();
-    const lastReminder = localStorage.getItem('lastLowStockReminder');
-    const today = now.toDateString();
-    
-    // Remind once per day
-    if (lastReminder !== today) {
-      const reminderTime = new Date();
-      reminderTime.setHours(18, 0, 0, 0); 
-
-      // If past 6 PM, schedule for tomorrow
-      if (now > reminderTime) {
-        reminderTime.setDate(reminderTime.getDate() + 1);
+    if (lowstockProducts.length > 0) {
+      if (permission === 'default') {
+        requestPermission();
       }
       
-      const timeUntilReminder = reminderTime - now;
+      // Schedule daily 6 PM reminder
+      const now = new Date();
+      const lastReminder = localStorage.getItem('lastLowStockReminder');
+      const today = now.toDateString();
       
-      setTimeout(() => {
-        if ( permission === 'granted') {
-          sendLowStockAlert(lowstockProducts);
-          localStorage.setItem('lastLowStockReminder', new Date().toDateString());
+      // Remind once per day
+      if (lastReminder !== today) {
+        const reminderTime = new Date();
+        reminderTime.setHours(18, 0, 0, 0); 
+
+        // If past 6 PM, schedule for tomorrow
+        if (now > reminderTime) {
+          reminderTime.setDate(reminderTime.getDate() + 1);
         }
-      }, timeUntilReminder);
-      
-      console.log(`Low stock reminder scheduled for ${reminderTime.toLocaleString()}`);
+        
+        const timeUntilReminder = reminderTime - now;
+        
+        setTimeout(() => {
+          if (permission === 'granted') {
+            sendLowStockAlert(lowstockProducts);
+            localStorage.setItem('lastLowStockReminder', new Date().toDateString());
+          }
+        }, timeUntilReminder);
+        
+        console.log(`Low stock reminder scheduled for ${reminderTime.toLocaleString()}`);
+      }
     }
-  }
-}, [products, permission, requestPermission, sendLowStockAlert]);
+  }, [products, permission, requestPermission, sendLowStockAlert]);
 
   // Auto-sync queue when back online
-React.useEffect(() => {
-  const handleOnline = async () => {
-    console.log('Back online! Processing sync queue...');
-    const result = await processSyncQueue();
-    
-    if (result.success && result.synced > 0) {
-      console.log(`Synced ${result.synced} offline changes!`);
+  React.useEffect(() => {
+    const handleOnline = async () => {
+      console.log('Back online! Processing sync queue...');
+      const result = await processSyncQueue();
+      
+      if (result.success && result.synced > 0) {
+        console.log(`Synced ${result.synced} offline changes!`);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    // Also process queue on app load (in case user closed app while offline)
+    if (navigator.onLine) {
+      processSyncQueue();
     }
-  };
 
-  window.addEventListener('online', handleOnline);
-
-  // Also process queue on app load (in case user closed app while offline)
-  if (navigator.onLine) {
-    processSyncQueue();
-  }
-
-  return () => {
-    window.removeEventListener('online', handleOnline);
-  };
-}, []);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -226,7 +227,7 @@ React.useEffect(() => {
     setShowImageModal(true);
   };
 
-   if (isLoading) {
+  if (loading || isLoading) {
     return <LoadingScreen />;
   }
 
@@ -254,7 +255,7 @@ React.useEffect(() => {
   //Filter and search logic
   const filteredProducts = products.filter(product => {
     //Search filter
-    const matchesSearch =product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     //Stock filter
     let matchesFilter = true;
@@ -264,108 +265,104 @@ React.useEffect(() => {
       matchesFilter = product.stock > product.minStock;
     }
 
-    return  matchesSearch && matchesFilter;
+    return matchesSearch && matchesFilter;
   })
 
   // Sort logic
-   filteredProducts.sort((a, b) => {
+  filteredProducts.sort((a, b) => {
     switch (sortBy) {
       case 'name':
         return a.name.localeCompare(b.name);
-        case 'stock-low':
+      case 'stock-low':
         return a.stock - b.stock;
-        case 'stock-high':
+      case 'stock-high':
         return b.stock - a.stock;
-        case 'date-new':
-         return b.id - a.id;
-         case 'date-old':
-          return a.id - b.id;
+      case 'date-new':
+        return b.id - a.id;
+      case 'date-old':
+        return a.id - b.id;
       default:
         return 0;
     }
   });
 
-  if (loading) {
-  return <LoadingScreen />;
-}
-
-if (!user) {
-  return <LoginScreen />;
-}
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <div className='app'>
-        <OfflineIndicator />
-        <InstallPrompt />
+      <OfflineIndicator />
+      <InstallPrompt />
       
-   <header className="app-header">
-  <div className="header-content">
-    {/* Hamburger Menu */}
-    <HamburgerMenu
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      userRole={profile?.role}
-      onAddWorker={() => setShowAddWorkerModal(true)}
-      onRestore={() => window.location.reload()}
-      onLogout={async () => {
-        if (window.confirm('Se déconnecter?')) {
-          await signOut();
-          window.location.reload();
-        }
-      }}
-      theme={theme}
-      onThemeToggle={toggleTheme}
-    />
+      <header className="app-header">
+        <div className="header-content">
+          {/* Hamburger Menu */}
+          <HamburgerMenu
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            userRole={profile?.role}
+            onAddWorker={() => setShowAddWorkerModal(true)}
+            onRestore={() => window.location.reload()}
+            onLogout={async () => {
+              if (window.confirm('Se déconnecter?')) {
+                await signOut();
+                window.location.reload();
+              }
+            }}
+            theme={theme}
+            onThemeToggle={toggleTheme}
+          />
 
-    {/* App Title */}
-    <div className="header-title">
-      <Package size={28} />
-      <div>
-        <h1>StockAlert</h1>
-        <p>Inventaire</p>
-      </div>
-    </div>
+          {/* App Title */}
+          <div className="header-title">
+            <Package size={28} />
+            <div>
+              <h1>StockAlert</h1>
+              <p>Inventaire</p>
+            </div>
+          </div>
 
-    {/* Right Side: Badge + Logout */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <div className="user-badge">
-        <span className="user-role">{profile?.role === 'owner' ? 'Propriétaire' : 'Travailleur'}</span>
-      </div>
-      
-      <button
-        onClick={async () => {
-          if (window.confirm('Se déconnecter?')) {
-            await signOut();
-            window.location.reload();
-          }
-        }}
-        style={{
-          padding: '8px 12px',
-          borderRadius: '8px',
-          border: 'none',
-          background: 'var(--danger-light)',
-          color: 'var(--danger)',
-          fontSize: '13px',
-          fontWeight: '600',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        <LogOut size={16} />
-        <span style={{ display: 'none' }}>Déconnexion</span>
-      </button>
-    </div>
-  </div>
-</header>
+          {/* Right Side: Badge + Logout */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="user-badge">
+              <span className="user-role">{profile?.role === 'owner' ? 'Propriétaire' : 'Travailleur'}</span>
+            </div>
+            
+            <button
+              onClick={async () => {
+                if (window.confirm('Se déconnecter?')) {
+                  await signOut();
+                  window.location.reload();
+                }
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'var(--danger-light)',
+                color: 'var(--danger)',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <LogOut size={16} />
+              <span style={{ display: 'none' }}>Déconnexion</span>
+            </button>
+          </div>
+        </div>
+      </header>
 
       <div className='container'>
         {/* TAB 1: INVENTAIRE */}
         {activeTab === 'inventory' && (
-  <>
-    {products.length > 0 && <AnalyticsSummary products={products} />}
+          <>
+            {products.length > 0 && <AnalyticsSummary products={products} />}
 
             {products.length > 0 && (
               <>
@@ -392,10 +389,10 @@ if (!user) {
             <div className='product-grid'>
               {filteredProducts.length === 0 ? (
                 <div className='empty-state'>
-                  <Package size={64} strokeWidth={1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}} />
+                  <Package size={64} strokeWidth={1} />
                   <p>Aucun produit trouvé</p>
                   <p className='empty-subtitle'>
-                    {searchQuery ? 'Essayez un autre terme de recherche' : 'Ajoutez votre premier produit ci-dessus'}
+                    {searchQuery ? 'Essayez un autre terme de recherche' : 'Ajoutez votre premier produit'}
                   </p>
                 </div>
               ) : (
@@ -424,7 +421,7 @@ if (!user) {
               </>
             ) : (
               <div className='empty-state'>
-                <Package size={64} strokeWidth={1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}} />
+                <Package size={64} strokeWidth={1} />
                 <p>Aucun produit</p>
                 <p className='empty-subtitle'>Ajoutez des produits dans l'onglet Inventaire</p>
               </div>
@@ -439,7 +436,7 @@ if (!user) {
               <TransactionHistory products={products} />
             ) : (
               <div className='empty-state'>
-                <Package size={64} strokeWidth={1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}} />
+                <Package size={64} strokeWidth={1} />
                 <p>Aucun produit</p>
                 <p className='empty-subtitle'>Ajoutez des produits dans l'onglet Inventaire</p>
               </div>
@@ -459,7 +456,7 @@ if (!user) {
                 />
               ) : (
                 <div className='empty-state'>
-                  <Package size={64} strokeWidth={1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}} />
+                  <Package size={64} strokeWidth={1} />
                   <p>Aucun produit</p>
                   <p className='empty-subtitle'>Ajoutez des produits dans l'onglet Inventaire</p>
                 </div>
@@ -473,9 +470,9 @@ if (!user) {
             )}
           </>
         )}
-
       </div>
 
+      {/* MODALS */}
       <AddProductModal
         show={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -501,20 +498,19 @@ if (!user) {
         product={selectedProduct}
         setProduct={setSelectedProduct}
         updateImages={updateImages}
-        />
+      />
 
-
-      {/* Modals */}
       <AddWorkerModal
         show={showAddWorkerModal}
         onClose={() => setShowAddWorkerModal(false)}
         onWorkerAdded={() => {
           alert('Travailleur ajouté avec succès!');
+          setShowAddWorkerModal(false);
         }}
       />
 
       {/* BOTTOM NAVIGATION */}
-      <BottomNavigation
+      <BottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onAddProduct={() => setShowAddModal(true)}
