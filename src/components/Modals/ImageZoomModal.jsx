@@ -47,33 +47,32 @@ const ImageZoomModal = ({ images, initialIndex = 0, onClose }) => {
         padding: '20px',
       }}
     >
-      {/* Close Button - CENTERED TOP, not overlapping header */}
+      {/* Close Button */}
       <button
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          marginTop: '-50vh', // Push to top center
-          width: '44px',
-          height: '44px',
-          borderRadius: '50%',
-          border: 'none',
-          background: 'rgba(255, 255, 255, 0.15)',
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 10001,
-          transition: 'all 0.2s',
-        }}
-        onMouseEnter={(e) => (e.target.style.background = 'rgba(255, 255, 255, 0.25)')}
-        onMouseLeave={(e) => (e.target.style.background = 'rgba(255, 255, 255, 0.15)')}
-      >
-        <X size={24} />
-      </button>
+  onClick={onClose}
+  style={{
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    border: 'none',
+    background: 'rgba(0, 0, 0, 0.6)',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: 10001,
+    transition: 'all 0.2s',
+    backdropFilter: 'blur(10px)'
+  }}
+  onMouseEnter={(e) => (e.target.style.background = 'rgba(0, 0, 0, 0.8)')}
+  onMouseLeave={(e) => (e.target.style.background = 'rgba(0, 0, 0, 0.6)')}
+>
+  <X size={24} />
+</button>
 
       {/* Main Image */}
       <img

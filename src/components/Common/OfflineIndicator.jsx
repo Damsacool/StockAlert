@@ -1,66 +1,71 @@
 import React, { useState, useEffect } from 'react';
-import { WifiOff, Wifi } from 'lucide-react';
+import { Cloud, CloudOff } from 'lucide-react';
+import { getSyncQueue } from '../../utils/db';
 
 const OfflineIndicator = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showReconnected, setShowReconnected] = useState(false);
-  const [showOffline, setShowOffline] = useState(false);
+  const [queueCount, setQueueCount] = useState(0);
 
   useEffect(() => {
-    // Only show offline banner if actually offline
-    setShowOffline(!navigator.onLine);
-
-    const handleOnline = () => {
-      console.log('[Network] Back online');
-      setIsOnline(true);
-      setShowOffline(false);
-      setShowReconnected(true);
-      
-      // Hide reconnected message after 3 seconds
-      setTimeout(() => {
-        setShowReconnected(false);
-      }, 3000);
-    };
-
-    const handleOffline = () => {
-      console.log('[Network] Gone offline');
-      setIsOnline(false);
-      setShowReconnected(false);
-      setShowOffline(true);
-    };
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Check sync queue periodically
+    const checkQueue = async () => {
+      try {
+        const queue = await getSyncQueue();
+        setQueueCount(queue.length);
+      } catch (err) {
+        console.error('Failed to get queue count:', err);
+      }
+    };
+
+    checkQueue();
+    const interval = setInterval(checkQueue, 5000); 
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
     };
   }, []);
 
-  // Show green 'reconnected' banner for 3 seconds
-  if (showReconnected) {
-    return (
-      <div className="offline-indicator online">
-        <Wifi size={18} />
-        <span>Connexion rétablie</span>
-      </div>
-    );
-  }
+  if (isOnline && queueCount === 0) return null;
 
-  // Only show red banner when offline
-  if (!isOnline && showOffline) {
-    return (
-      <div className="offline-indicator offline">
-        <WifiOff size={18} />
-        <span>Mode Hors Ligne</span>
-        <span className="offline-subtitle">Vos données sont sauvegardées localement</span>
-      </div>
-    );
-  }
-
-  // Don't show anything when online
-  return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '70px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      background: isOnline ? 'var(--warning-light)' : 'var(--danger-light)',
+      color: isOnline ? 'var(--warning)' : 'var(--danger)',
+      padding: '8px 16px',
+      borderRadius: '20px',
+      fontSize: '13px',
+      fontWeight: '600',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      boxShadow: 'var(--shadow-md)'
+    }}>
+      {isOnline ? (
+        <>
+          <Cloud size={16} />
+          {queueCount} en attente de sync
+        </>
+      ) : (
+        <>
+          <CloudOff size={16} />
+          Mode hors ligne
+        </>
+      )}
+    </div>
+  );
 };
 
 export default OfflineIndicator;

@@ -116,44 +116,56 @@ class DatabaseManager {
       const request = objectStore.add(cleanProduct);
 
       request.onsuccess = async () => {
-        // console.log('Product added successfully:', cleanProduct.name);
-        
-        // Try to sync to Supabase
-        try {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          const { error } = await supabase
-            .from('products')
-            .insert([{
-              id: cleanProduct.id,
-              name: cleanProduct.name,
-              stock: cleanProduct.stock,
-              minStock: cleanProduct.minStock,
-              costPrice: cleanProduct.costPrice,
-              sellingPrice: cleanProduct.sellingPrice,
-              images: cleanProduct.images,
-              created_by: cleanProduct.created_by || currentUser?.id,
-              updated_by: currentUser?.id,
-              tenant_id: currentUser?.id
-            }]);
-          
-          if (error) throw error;
-          console.log('Synced to Supabase successfully!');
-        } catch (err) {
-          console.error('Sync failed, adding to queue:', err.message);
-          // Add to queue for later sync
-          await addToSyncQueue('ADD_PRODUCT', {
-            id: cleanProduct.id,
-            name: cleanProduct.name,
-            stock: cleanProduct.stock,
-            minStock: cleanProduct.minStock,
-            costPrice: cleanProduct.costPrice,
-            sellingPrice: cleanProduct.sellingPrice,
-            images: cleanProduct.images
-          });
-        }
-        
-        resolve(cleanProduct);
-      };
+  console.log('Product saved to IndexedDB:', cleanProduct.name);
+  
+  // Try to sync to Supabase (but don't block if it fails)
+  if (navigator.onLine) {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('products')
+        .insert([{
+          id: cleanProduct.id,
+          name: cleanProduct.name,
+          stock: cleanProduct.stock,
+          minStock: cleanProduct.minStock,
+          costPrice: cleanProduct.costPrice,
+          sellingPrice: cleanProduct.sellingPrice,
+          images: cleanProduct.images,
+          created_by: currentUser?.id,
+          updated_by: currentUser?.id,
+          tenant_id: currentUser?.id
+        }]);
+      
+      if (error) throw error;
+      console.log('✓ Synced to Supabase!');
+    } catch (err) {
+      console.log('Offline - queued for sync:', err.message);
+      await addToSyncQueue('ADD_PRODUCT', {
+        id: cleanProduct.id,
+        name: cleanProduct.name,
+        stock: cleanProduct.stock,
+        minStock: cleanProduct.minStock,
+        costPrice: cleanProduct.costPrice,
+        sellingPrice: cleanProduct.sellingPrice,
+        images: cleanProduct.images
+      });
+    }
+  } else {
+    console.log('Offline - queued for sync');
+    await addToSyncQueue('ADD_PRODUCT', {
+      id: cleanProduct.id,
+      name: cleanProduct.name,
+      stock: cleanProduct.stock,
+      minStock: cleanProduct.minStock,
+      costPrice: cleanProduct.costPrice,
+      sellingPrice: cleanProduct.sellingPrice,
+      images: cleanProduct.images
+    });
+  }
+  
+  resolve(cleanProduct);
+};
 
       request.onerror = (e) => {
         console.error('Failed to add product:', e.target.error);
@@ -180,47 +192,6 @@ class DatabaseManager {
     };
   });
 }
-
-  async getProductsForUser(userId) {
-    try {
-      // First, try to fetch from Supabase for the current user
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('created_by', userId);
-      
-      if (error) {
-        console.warn('Error fetching from Supabase, using local cache:', error.message);
-        // Fall back to local IndexedDB filtered by user
-        const allProducts = await this.getAllProducts();
-        return allProducts.filter(p => p.created_by === userId) || [];
-      }
-      
-      if (data && data.length > 0) {
-        // Update local cache with Supabase data
-        for (const product of data) {
-          if (!product.created_by) {
-            product.created_by = userId;
-          }
-          try {
-            await this.addProduct(product);
-          } catch (err) {
-            // Product might already exist, just log and continue
-            if (!err.message.includes('duplicate')) {
-              console.log('Product already exists:', product.id);
-            }
-          }
-        }
-      }
-      
-      return data || [];
-    } catch (err) {
-      console.error('Failed to get user products:', err);
-      // Final fallback: get all local products for this user
-      const allProducts = await this.getAllProducts();
-      return allProducts.filter(p => p.created_by === userId) || [];
-    }
-  }
 
   async updateProduct(product) {
     if (!this.db) await this.init();
@@ -425,6 +396,63 @@ class DatabaseManager {
 
 const dbManager = new DatabaseManager();
 
+ export const getProductsForUser = async (tenantId) => {
+  try {
+    console.log('Loading products for tenant:', tenantId);
+    
+    // First try to load from Supabase (will sync to IndexedDB)
+    if (navigator.onLine) {
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase fetch error:', error);
+      } else if (products && products.length > 0) {
+        console.log(`Found ${products.length} products in Supabase`);
+        
+        // Sync to IndexedDB
+        const db = await dbManager.init();
+        const tx = db.transaction(['products'], 'readwrite');
+        const store = tx.objectStore('products');
+        
+        // Clear local products first
+        await store.clear();
+        
+        // Add all products from Supabase
+        for (const product of products) {
+          await store.add({
+            id: product.id,
+            name: product.name,
+            stock: product.stock,
+            minStock: product.minStock,
+            costPrice: product.costPrice,
+            sellingPrice: product.sellingPrice,
+            images: product.images || [],
+            created_by: product.created_by
+          });
+        }
+        
+        return products;
+      }
+    }
+    
+    // Fallback to IndexedDB (offline or no Supabase data)
+    const localProducts = await dbManager.getAllProducts();
+    console.log(`Found ${localProducts.length} products in IndexedDB`);
+    return localProducts;
+    
+  } catch (err) {
+    console.error('Failed to get products for user:', err);
+    // Fallback to local
+    return await dbManager.getAllProducts();
+  }
+};
+
+
+
 // Sync queue functions
 export const addToSyncQueue = async (action, data) => {
   try {
@@ -561,24 +589,37 @@ export const processSyncQueue = async () => {
 export const restoreFromSupabase = async () => {
   try {
     console.log('Starting restore from Supabase...');
-
-    // Get current user's tenant_id
+    
+    // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
     
-    // Fetch all products from Supabase
+    // Get user profile to find tenant_id
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('tenant_id')
+      .eq('id', user.id)
+      .single();
+    
+    if (profileError || !profile) {
+      throw new Error('Could not load user profile');
+    }
+    
+    console.log('Restoring for tenant:', profile.tenant_id);
+    
+    // Fetch products for this tenant (works for both owner and worker)
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('*')
-      .eq('tenant_id', user.id);
+      .eq('tenant_id', profile.tenant_id);
     
     if (productsError) throw productsError;
     
-    // Fetch all transactions from Supabase
+    // Fetch transactions for this tenant
     const { data: transactions, error: transactionsError } = await supabase
       .from('transactions')
       .select('*')
-      .eq('tenant_id', user.id);
+      .eq('tenant_id', profile.tenant_id);
     
     if (transactionsError) throw transactionsError;
     
@@ -587,64 +628,63 @@ export const restoreFromSupabase = async () => {
 
     const db = await dbManager.init();
 
-    // Batch insert products
+    // Batch insert products and transactions
     return new Promise((resolve, reject) => {
       const tx = db.transaction(['products', 'transactions'], 'readwrite');
       const productStore = tx.objectStore('products');
       const transactionStore = tx.objectStore('transactions');
     
-    // Add all products
-    for (const product of products) {
-      productStore.add({
-        id: product.id,
-        name: product.name,
-        stock: product.stock,
-        minStock: product.minStock,
-        costPrice: product.costPrice,
-        sellingPrice: product.sellingPrice,
-        images: product.images || []
-      });
-    }
-    
-    // Add all transactions
-    for (const transaction of transactions) {
-      transactionStore.add({
-        productId: transaction.productId,
-        productName: transaction.productName,
-        type: transaction.type,
-        quantity: transaction.quantity,
-        date: transaction.date || transaction.created_at
-      });
-    }
+      // Add all products
+      for (const product of products) {
+        productStore.add({
+          id: product.id,
+          name: product.name,
+          stock: product.stock,
+          minStock: product.minStock,
+          costPrice: product.costPrice,
+          sellingPrice: product.sellingPrice,
+          images: product.images || []
+        });
+      }
+      
+      // Add all transactions
+      for (const transaction of transactions) {
+        transactionStore.add({
+          productId: transaction.productId,
+          productName: transaction.productName,
+          type: transaction.type,
+          quantity: transaction.quantity,
+          date: transaction.date || transaction.created_at
+        });
+      }
 
-    tx.oncomplete = () => {
-       console.log('Restore complete!');
-       console.log(`Restored ${products.length} products and ${transactions.length} transactions`);
-       resolve({
-        success: true,
-        productsCount: products.length,
-        transactionsCount: transactions.length
-       });
+      tx.oncomplete = () => {
+        console.log('Restore complete!');
+        console.log(`Restored ${products.length} products and ${transactions.length} transactions`);
+        resolve({
+          success: true,
+          productsCount: products.length,
+          transactionsCount: transactions.length
+        });
+      };
+      
+      tx.onerror = () => {
+        console.error('Restore failed:', tx.error);
+        reject(new Error('Restore transaction failed'));
+      };
+    });
+  } catch (error) {
+    console.error('Restore failed:', error);
+    return {
+      success: false,
+      error: error.message
     };
-    
-    tx.onerror = () => {
-    console.error('Restore failed:', tx.error);
-    reject(new Error('Restore transaction failed'));
-    }
-  });
-} catch (error) {
-  console.error('Restore failed:', error);
-  return {
-    success: false,
-    error: error.message
-  };
-}
+  }
 };
 
 // Exported functions
 export const initDB = () => dbManager.init();
 export const getAllProducts = () => dbManager.getAllProducts();
-export const getProductsForUser = (userId) => dbManager.getProductsForUser(userId);
 export const addProduct = (product) => dbManager.addProduct(product);
 export const updateProduct = (product) => dbManager.updateProduct(product);
 export const deleteProduct = (productId) => dbManager.deleteProduct(productId);

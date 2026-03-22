@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Minus, ChevronDown, ChevronUp, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Minus, Trash2, Image as ImageIcon } from 'lucide-react';
 import ImageZoomModal from '../Modals/ImageZoomModal';
 import './CompactProductCard.css';
 
@@ -34,20 +34,44 @@ const CompactProductCard = ({ product, onStockChange, onEdit, onDelete, userRole
 
         <div className="compact-actions">
           <button 
-            className="compact-btn decrease"
-            onClick={(e) => { e.stopPropagation(); onStockChange(product.id, 'decrement'); }}
-          >
-            <Minus size={16} />
-          </button>
-          <button 
-            className="compact-btn increase"
-            onClick={(e) => { e.stopPropagation(); onStockChange(product.id, 'increment'); }}
-          >
-            <Plus size={16} />
-          </button>
-          <button className="expand-btn">
-            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
+  className="compact-btn decrease"
+  onClick={(e) => { 
+    e.stopPropagation(); 
+    if (e.shiftKey) {
+      onStockChange(product.id, 'bulk-decrease');
+    } else {
+      onStockChange(product.id, 'decrement');
+    }
+  }}
+  onContextMenu={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onStockChange(product.id, 'bulk-decrease');
+  }}
+  title="Click: -1 | Right-click: Enter amount"
+>
+  <Minus size={16} />
+</button>
+
+<button 
+  className="compact-btn increase"
+  onClick={(e) => { 
+    e.stopPropagation(); 
+    if (e.shiftKey) {
+      onStockChange(product.id, 'bulk-increase');
+    } else {
+      onStockChange(product.id, 'increment');
+    }
+  }}
+  onContextMenu={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onStockChange(product.id, 'bulk-increase');
+  }}
+  title="Click: +1 | Right-click: Enter amount"
+>
+  <Plus size={16} />
+</button>
         </div>
       </div>
 

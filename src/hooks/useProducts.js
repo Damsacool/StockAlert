@@ -4,65 +4,70 @@ import { useAuth } from '../contexts/AuthContext';
 
 
 export const useProducts = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Initialize database and load products for current user
   useEffect(() => {
-    const initApp = async () => {
-      try {
-        await db.initDB();
-        
-        // Load products for the current user only
-        if (user?.id) {
-          const loadedProducts = await db.getProductsForUser(user.id);
-          setProducts(loadedProducts || []);
-        } else {
-          setProducts([]);
-        }
-        } catch (err) {
-        console.error('Failed to initialize:', err);
-        setError(err.message);
-        } finally {
-        setIsLoading(false);
+  const initApp = async () => {
+    try {
+      await db.initDB();
+      
+      // Load products for the tenant (owner's products for workers)
+      if (profile?.tenant_id) {
+        const loadedProducts = await db.getProductsForUser(profile.tenant_id);
+        setProducts(loadedProducts || []);
+      } else {
+        setProducts([]);
       }
-    };
+    } catch (err) {
+      console.error('Failed to initialize:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    initApp();
-    }, [user?.id]);
+  initApp();
+}, [profile?.tenant_id]); 
 
   // Add new product
   const addNewProduct = async (productData) => {
+  try {
+    const newProduct = {
+      id: Date.now(),
+      name: productData.name || '',
+      stock: Number(productData.stock) || 0,
+      minStock: Number(productData.minStock) || 0,
+      costPrice: Number(productData.costPrice) || 0,
+      sellingPrice: Number(productData.sellingPrice) || 0,
+      images: Array.isArray(productData.images) ? productData.images : [],
+      created_by: user?.id
+    };
+
+    console.log('Adding product:', newProduct);
+
+    // OPTIMISTIC UPDATE: Update UI immediately
+    setProducts(prev => [newProduct, ...prev]);
+    
     try {
-      // Get current user
-      const newProduct = {
-        id: Date.now(),
-        name: productData.name || '',
-        stock: Number(productData.stock) || 0,
-        minStock: Number(productData.minStock) || 0,
-        costPrice: Number(productData.costPrice) || 0,
-        sellingPrice: Number(productData.sellingPrice) || 0,
-        images: Array.isArray(productData.images) ? productData.images : [],
-        created_by: user?.id
-      };
-
-      console.log('Adding product:', newProduct); 
-
-      // Add to IndexedDB
+      // Add to IndexedDB (will queue for sync if offline)
       await db.addProduct(newProduct);
-      
-      // Update state
-      setProducts(prev => [newProduct, ...prev]);
-      
-      return newProduct;
-    } catch (err) {
-      console.error('Failed to add product:', err);
-      alert('Erreur: Impossible d\'ajouter le produit');
-      throw err;
+      console.log('Product added to local database');
+    } catch (dbError) {
+      console.error('Database error (will retry on sync):', dbError);
+      // Don't throw - product is already in UI
     }
-  };
+    
+    return newProduct;
+  } catch (err) {
+    console.error('Failed to add product:', err);
+    alert('Erreur: Impossible d\'ajouter le produit');
+    throw err;
+  }
+};
 
   // Update product stock
   const updateStock = async (productId, newStockOrAction) => {

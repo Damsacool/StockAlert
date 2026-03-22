@@ -18,7 +18,7 @@ import PrintReports from './components/Layout/PrintReports';
 import InstallPrompt from './components/Common/InstallPrompt';
 import OfflineIndicator from './components/Common/OfflineIndicator';
 import { useNotifications } from './hooks/useNotifications';
-import { processSyncQueue } from './utils/db';
+import { processSyncQueue, restoreFromSupabase } from './utils/db';
 import { useAuth } from './contexts/AuthContext';
 import LoginScreen from './components/Auth/LoginScreen';
 import AddWorkerModal from './components/Auth/AddWorkerModal';
@@ -110,6 +110,7 @@ function App() {
   const [sortBy, setSortBy] = useState('name');
   const [activeTab, setActiveTab] = useState('inventory');
   const [showAddWorkerModal, setShowAddWorkerModal] = useState(false);
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -147,6 +148,8 @@ function App() {
   };
 
   const handleAddProduct = async () => {
+    if (isAddingProduct) return; // Prevent multiple submissions
+
     if (!formData.name.trim()) {
       alert('Entrez le nom du produit');
       return;
@@ -176,6 +179,8 @@ function App() {
 
     const validImages = formData.images.filter(img => img && img.trim() !== '');
 
+    setIsAddingProduct(true);
+
     try {
       const productData = {
         name: formData.name.trim(),
@@ -197,12 +202,15 @@ function App() {
         images: ['', '', '', '']
       });
       
-      setShowAddModal(false);
-      alert('✓ Produit ajouté avec succès!');
-    } catch (err) {
-      console.error('Error in handleAddProduct:', err);
-    }
-  };
+    setShowAddModal(false);
+    alert('✓ Produit ajouté avec succès!');
+  } catch (err) {
+    console.error('Error in handleAddProduct:', err);
+    alert('Erreur: Impossible d\'ajouter le produit');
+  } finally {
+    setIsAddingProduct(false); // To re-enable the button after operation completes
+  }
+};
 
   const handleImageUpload = (index, file) => {
     if (!file) return;
@@ -297,21 +305,39 @@ function App() {
       
       <header className="app-header">
         <div className="header-content">
+
           {/* Hamburger Menu */}
           <HamburgerMenu
             activeTab={activeTab}
             onTabChange={setActiveTab}
             userRole={profile?.role}
             onAddWorker={() => setShowAddWorkerModal(true)}
-            onRestore={() => window.location.reload()}
+            onRestore={async () => {
+              if (window.confirm('Restaurer depuis le cloud? Cela remplacera les données locales.')) {
+                try {
+                  const result = await restoreFromSupabase();
+        
+                  if (result.success) {
+                    alert(`✓ ${result.productsCount} produits restaurés!`);
+                    window.location.reload();
+                  } else {
+                    alert('Erreur: ' + result.error);
+                  }
+                } catch (err) {
+                  console.error('Restore error:', err);
+                  alert('Erreur lors de la restauration');
+                }
+              }
+            }}
+            
             onLogout={async () => {
               if (window.confirm('Se déconnecter?')) {
                 await signOut();
                 window.location.reload();
-              }
+            }
             }}
-            theme={theme}
-            onThemeToggle={toggleTheme}
+              theme={theme}
+              onThemeToggle={toggleTheme}
           />
 
           {/* App Title */}
@@ -480,6 +506,7 @@ function App() {
         setFormData={setFormData}
         onSubmit={handleAddProduct}
         onImageUpload={handleImageUpload}
+        isSubmitting={isAddingProduct}
       />
 
       <BulkEditModal

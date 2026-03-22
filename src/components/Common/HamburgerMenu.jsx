@@ -94,13 +94,14 @@ const HamburgerMenu = ({
         <UserPlus size={20} />
         <span>Ajouter travailleur</span>
       </button>
-
-      <button className="menu-item" onClick={() => handleItemClick('restore')}>
-        <Download size={20} />
-        <span>Restaurer du cloud</span>
-      </button>
     </>
   )}
+
+  {/* Restore from Cloud */}
+  <button className="menu-item" onClick={() => handleItemClick('restore')}>
+      <Download size={20} />
+      <span>Restaurer du cloud</span>
+    </button>
 
   {/* Logout */}
   <button className="menu-item danger" onClick={() => handleItemClick('logout')}>
