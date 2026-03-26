@@ -137,7 +137,7 @@ const SalesDashboard = ({ products }) => {
                         <div className='best-sellers-list'>
                             {bestSellers.map((sellers, index) => (
                                 <div key={index} className='best-seller-item'>
-                                    <div className='seller-rank'>#{index + 0}</div>
+                                    <div className='seller-rank'>#{index + 1}</div>
                                     <div className='seller-info'>
                                         <p className='seller-name'>{sellers.productName}</p>
                                         <p className='seller-stats'>

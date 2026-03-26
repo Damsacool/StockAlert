@@ -1,76 +1,65 @@
-import { useState, useEffect, useCallback } from "react";   
+import { useState, useEffect, useCallback } from 'react';
 
 export const useNotifications = () => {
-    const [permission, setPermission] = useState('default');
-    const [isSupported, setIsSupported] = useState(false);
+  const [permission, setPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
 
-    useEffect(() => {
-        if ('Notification' in window) {
-            setIsSupported(true);
-            setPermission(Notification.permission);
-        }
-    }, []);
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') {
+      setPermission(Notification.permission);
+    }
+  }, []);
 
-    const requestPermission = useCallback(async () => {
-        if (!isSupported) return false;
+  const requestPermission = useCallback(async () => {
+    if (typeof Notification === 'undefined') {
+      console.warn('Notifications not supported');
+      return 'denied';
+    }
 
-        try {
-            const result = await Notification.requestPermission();
-            setPermission(result);  
-            return result === 'granted';
-        } catch (error) {
-            console.error('[Notifications] Error:', error);
-            return false;
-        }
-    }, [isSupported]);
+    try {
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      return result;
+    } catch (err) {
+      console.error('Permission request failed:', err);
+      return 'denied';
+    }
+  }, []);
 
-    const sendNotification = useCallback((title, options = {})=> {
-        if (!isSupported || permission !== 'granted') return null;
+  const sendLowStockAlert = useCallback((products) => {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      return;
+    }
 
-        try {
-            const notification = new Notification(title, {
-                icon: '/logo192.png',
-                badge: '/logo192.png',
-                ...options
-            });
-            
-            notification.onclick = () => {
-                window.focus();
-                notification.close();
-            };
+    const lowStockCount = products.length;
+    const productNames = products.slice(0, 3).map(p => p.name).join(', ');
+    
+    try {
+      const notification = new Notification('⚠️ Stock Bas - StockAlert', {
+        body: `${lowStockCount} produit${lowStockCount > 1 ? 's' : ''} en stock bas:\n${productNames}${products.length > 3 ? '...' : ''}`,
+        icon: '/logo192.ico',
+        badge: '/logo192.ico',
+        tag: 'low-stock-alert',
+        requireInteraction: true,
+        silent: false
+      });
 
-            return notification;
-            } catch (error) {
-                console.error('[Notifications] Send failed:', error);
-                return null;
-            };
-        }, [isSupported, permission]);
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
 
-        const sendLowStockAlert = useCallback((lowStockProducts = []) => {
-            if (!lowStockProducts.length) return;
+      // Auto close after 10 seconds
+      setTimeout(() => notification.close(), 10000);
+    } catch (err) {
+      console.error('Failed to send notification:', err);
+    }
+  }, []);
 
-            const count = lowStockProducts.length;
-            const title = count === 1
-            ? '⚠️ Stock Faible' 
-            : `⚠️ ${count} Produits en Stock Faible`;
-
-            const productNames = lowStockProducts
-            .slice(0, 3)
-            .map(p => p.name)
-            .join(', ');
-
-            const body = count === 1
-             ? `${productNames} - Stock: ${lowStockProducts[0].stock}`
-             : `${productNames}${count > 3 ? ` et ${count - 3} autres` : ''}`;
-
-             return sendNotification(title, { body });
-         }, [sendNotification]);
-
-    return {
-        permission,
-        isSupported,
-        requestPermission,
-        sendNotification,
-        sendLowStockAlert
-    };
+  return {
+    permission,
+    requestPermission,
+    sendLowStockAlert
+  };
 };

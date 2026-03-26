@@ -1642,6 +1642,10 @@ grid-column: span 1;
   transition: all 0.2s;
   font-weight: 500;
   color: var(--dark);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .history-select:hover {
@@ -1792,10 +1796,17 @@ grid-column: span 1;
 @media (max-width: 768px) {
   .history-filters {
     flex-direction: column;
+    gap: 12px;
   }
 
   .filter-group {
     width: 100%;
+    min-width: unset;
+  }
+
+  .history-select {
+    max-width: 100%;
+    min-width: 0;
   }
 
   .transaction-item {

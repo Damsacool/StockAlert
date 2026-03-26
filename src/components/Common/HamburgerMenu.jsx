@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Menu, X, Package, TrendingUp, 
-  Clock, FileText, UserPlus, Download, 
+  Clock, FileText, UserPlus, Download, Upload, 
   LogOut, Moon, Sun 
 } from 'lucide-react';
 import './HamburgerMenu.css';
@@ -12,6 +12,7 @@ const HamburgerMenu = ({
   userRole, 
   onAddWorker, 
   onRestore, 
+  onBulkImport,
   onLogout,
   theme,
   onThemeToggle 
@@ -28,6 +29,8 @@ const HamburgerMenu = ({
   const handleItemClick = (id) => {
   if (id === 'add-worker') {
     onAddWorker();
+  } else if (id === 'bulk-import') {
+    onBulkImport();
   } else if (id === 'restore') {
     onRestore();
   } else if (id === 'logout') {
@@ -94,6 +97,11 @@ const HamburgerMenu = ({
         <UserPlus size={20} />
         <span>Ajouter travailleur</span>
       </button>
+
+      <button className="menu-item" onClick={() => handleItemClick('bulk-import')}>
+      <Upload size={20} />
+      <span>Import en masse</span>
+    </button>
     </>
   )}
 

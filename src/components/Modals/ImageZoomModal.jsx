@@ -31,7 +31,6 @@ const ImageZoomModal = ({ images, initialIndex = 0, onClose }) => {
 
   return (
     <div
-      className="image-zoom-modal"
       onClick={handleBackdropClick}
       style={{
         position: 'fixed',
@@ -47,32 +46,32 @@ const ImageZoomModal = ({ images, initialIndex = 0, onClose }) => {
         padding: '20px',
       }}
     >
-      {/* Close Button */}
+      {/* Close Button - TOP RIGHT */}
       <button
-  onClick={onClose}
-  style={{
-    position: 'absolute',
-    top: '20px',
-    right: '20px',
-    width: '44px',
-    height: '44px',
-    borderRadius: '50%',
-    border: 'none',
-    background: 'rgba(0, 0, 0, 0.6)',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    zIndex: 10001,
-    transition: 'all 0.2s',
-    backdropFilter: 'blur(10px)'
-  }}
-  onMouseEnter={(e) => (e.target.style.background = 'rgba(0, 0, 0, 0.8)')}
-  onMouseLeave={(e) => (e.target.style.background = 'rgba(0, 0, 0, 0.6)')}
->
-  <X size={24} />
-</button>
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          width: '44px',
+          height: '44px',
+          borderRadius: '50%',
+          border: 'none',
+          background: 'rgba(0, 0, 0, 0.6)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 10001,
+          transition: 'all 0.2s',
+          backdropFilter: 'blur(10px)'
+        }}
+        onMouseEnter={(e) => (e.target.style.background = 'rgba(0, 0, 0, 0.8)')}
+        onMouseLeave={(e) => (e.target.style.background = 'rgba(0, 0, 0, 0.6)')}
+      >
+        <X size={24} />
+      </button>
 
       {/* Main Image */}
       <img
@@ -88,10 +87,10 @@ const ImageZoomModal = ({ images, initialIndex = 0, onClose }) => {
         onClick={(e) => e.stopPropagation()}
       />
 
-      {/* Navigation - INSIDE viewport, mobile-friendly */}
+      {/* Navigation - Only show if multiple images */}
       {images.length > 1 && (
         <>
-          {/* Previous Button - LEFT SIDE */}
+          {/* Previous Button */}
           <button
             onClick={handlePrevious}
             style={{
@@ -118,7 +117,7 @@ const ImageZoomModal = ({ images, initialIndex = 0, onClose }) => {
             <ChevronLeft size={28} />
           </button>
 
-          {/* Next Button - RIGHT SIDE */}
+          {/* Next Button */}
           <button
             onClick={handleNext}
             style={{
@@ -144,45 +143,27 @@ const ImageZoomModal = ({ images, initialIndex = 0, onClose }) => {
           >
             <ChevronRight size={28} />
           </button>
+
+          {/* Counter */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '30px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(0, 0, 0, 0.7)',
+              color: 'white',
+              padding: '10px 20px',
+              borderRadius: '20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            {currentIndex + 1} / {images.length}
+          </div>
         </>
       )}
-
-      {/* Counter - BOTTOM CENTER */}
-      {images.length > 1 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '30px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(0, 0, 0, 0.7)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '20px',
-            fontSize: '14px',
-            fontWeight: '600',
-            backdropFilter: 'blur(10px)',
-          }}
-        >
-          {currentIndex + 1} / {images.length}
-        </div>
-      )}
-
-      {/* Swipe Instructions for Mobile */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '70px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: 'rgba(255, 255, 255, 0.6)',
-          fontSize: '12px',
-          textAlign: 'center',
-          pointerEvents: 'none',
-        }}
-      >
-        {images.length > 1 && 'Tap arrows or use keyboard ← →'}
-      </div>
     </div>
   );
 };

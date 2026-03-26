@@ -6,6 +6,7 @@ import CompactProductCard from './components/ProductFeatures/CompactProductCard'
 import AddProductModal from './components/Modals/AddProductModal';
 import BulkEditModal from './components/Modals/BulkEditModal';
 import ImageEditorModal from './components/Modals/ImageEditorModal';
+import BulkImportModal from './components/Modals/BulkImportModal';
 import './styles/App.css';
 import AnalyticsSummary from './components/Layout/AnalyticsSummary'; 
 import SearchBar from './components/Common/SearchBar';
@@ -38,43 +39,94 @@ function App() {
 
   const { theme, toggleTheme } = useTheme();
 
-  // Check for low stock and schedule daily reminders
-  React.useEffect(() => {
-    const lowstockProducts = products.filter(p => p.stock <= p.minStock);
+// Daily 6 PM low stock reminder
+React.useEffect(() => {
+  const scheduleDailyReminder = () => {
+    const lowStockProducts = products.filter(p => p.stock <= p.minStock);
     
-    if (lowstockProducts.length > 0) {
-      if (permission === 'default') {
-        requestPermission();
-      }
-      
-      // Schedule daily 6 PM reminder
-      const now = new Date();
-      const lastReminder = localStorage.getItem('lastLowStockReminder');
-      const today = now.toDateString();
-      
-      // Remind once per day
-      if (lastReminder !== today) {
-        const reminderTime = new Date();
-        reminderTime.setHours(18, 0, 0, 0); 
+    if (lowStockProducts.length === 0) {
+      // No low stock products, clear any existing reminders
+      localStorage.removeItem('nextReminderTime');
+      return;
+    }
 
-        // If past 6 PM, schedule for tomorrow
-        if (now > reminderTime) {
-          reminderTime.setDate(reminderTime.getDate() + 1);
+    // Request permission if not already granted
+    if (permission === 'default') {
+      requestPermission();
+    }
+
+    if (permission !== 'granted') {
+      return; 
+    }
+
+    const now = new Date();
+    
+    // Calculate next 6 PM
+    const next6PM = new Date();
+    next6PM.setHours(18, 0, 0, 0);
+    
+    // If it's past 6 PM today, schedule for tomorrow
+    if (now > next6PM) {
+      next6PM.setDate(next6PM.getDate() + 1);
+    }
+    
+    const timeUntil6PM = next6PM - now;
+    
+    console.log(`Next low stock reminder scheduled for: ${next6PM.toLocaleString()}`);
+    console.log(`Time until reminder: ${Math.round(timeUntil6PM / 1000 / 60)} minutes`);
+    
+    // Store next reminder time
+    localStorage.setItem('nextReminderTime', next6PM.toISOString());
+    
+    // Schedule the reminder
+    const timerId = setTimeout(() => {
+      console.log('Sending scheduled low stock reminder...');
+      sendLowStockAlert(lowStockProducts);
+      localStorage.setItem('lastLowStockReminder', new Date().toDateString());
+      
+      // Reschedule for next day
+      setTimeout(() => scheduleDailyReminder(), 1000);
+    }, timeUntil6PM);
+    
+    // Cleanup function
+    return () => {
+      clearTimeout(timerId);
+    };
+  };
+
+  // Start the scheduler
+  const cleanup = scheduleDailyReminder();
+  
+  return cleanup;
+}, [products, permission, requestPermission, sendLowStockAlert]);
+
+// Check on app startup if we missed a reminder
+React.useEffect(() => {
+  const checkMissedReminder = () => {
+    const nextReminderTime = localStorage.getItem('nextReminderTime');
+    const lastReminder = localStorage.getItem('lastLowStockReminder');
+    const now = new Date();
+    
+    if (nextReminderTime) {
+      const scheduled = new Date(nextReminderTime);
+      
+      // If scheduled time has passed and we haven't sent today
+      if (now > scheduled && lastReminder !== now.toDateString()) {
+        const lowStockProducts = products.filter(p => p.stock <= p.minStock);
+        
+        if (lowStockProducts.length > 0 && permission === 'granted') {
+          console.log('Sending missed reminder...');
+          sendLowStockAlert(lowStockProducts);
+          localStorage.setItem('lastLowStockReminder', now.toDateString());
         }
-        
-        const timeUntilReminder = reminderTime - now;
-        
-        setTimeout(() => {
-          if (permission === 'granted') {
-            sendLowStockAlert(lowstockProducts);
-            localStorage.setItem('lastLowStockReminder', new Date().toDateString());
-          }
-        }, timeUntilReminder);
-        
-        console.log(`Low stock reminder scheduled for ${reminderTime.toLocaleString()}`);
       }
     }
-  }, [products, permission, requestPermission, sendLowStockAlert]);
+  };
+
+  if (products.length > 0) {
+    checkMissedReminder();
+  }
+}, [products, permission, sendLowStockAlert]);
 
   // Auto-sync queue when back online
   React.useEffect(() => {
@@ -105,6 +157,7 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [bulkAmount, setBulkAmount] = useState('');
   const [bulkType, setBulkType] = useState('');
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [sortBy, setSortBy] = useState('name');
@@ -148,7 +201,7 @@ function App() {
   };
 
   const handleAddProduct = async () => {
-    if (isAddingProduct) return; // Prevent multiple submissions
+    if (isAddingProduct) return; 
 
     if (!formData.name.trim()) {
       alert('Entrez le nom du produit');
@@ -209,6 +262,30 @@ function App() {
     alert('Erreur: Impossible d\'ajouter le produit');
   } finally {
     setIsAddingProduct(false); // To re-enable the button after operation completes
+  }
+};
+
+const handleBulkImport = async (products) => {
+  try {
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const productData of products) {
+      try {
+        await addNewProduct(productData);
+        successCount++;
+      } catch (err) {
+        console.error('Failed to import product:', productData.name, err);
+        failCount++;
+      }
+    }
+
+    if (failCount > 0) {
+      alert(`Import terminé: ${successCount} réussis, ${failCount} échecs`);
+    }
+  } catch (err) {
+    console.error('Bulk import error:', err);
+    alert('Erreur lors de l\'import en masse');
   }
 };
 
@@ -312,6 +389,7 @@ function App() {
             onTabChange={setActiveTab}
             userRole={profile?.role}
             onAddWorker={() => setShowAddWorkerModal(true)}
+            onBulkImport={() => setShowBulkImportModal(true)}
             onRestore={async () => {
               if (window.confirm('Restaurer depuis le cloud? Cela remplacera les données locales.')) {
                 try {
@@ -329,7 +407,7 @@ function App() {
                 }
               }
             }}
-            
+
             onLogout={async () => {
               if (window.confirm('Se déconnecter?')) {
                 await signOut();
@@ -534,6 +612,12 @@ function App() {
           alert('Travailleur ajouté avec succès!');
           setShowAddWorkerModal(false);
         }}
+      />
+
+      <BulkImportModal
+        show={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        onImport={handleBulkImport}
       />
 
       {/* BOTTOM NAVIGATION */}
