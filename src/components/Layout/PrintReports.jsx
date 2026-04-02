@@ -1,8 +1,10 @@
 import React from 'react';
-import { Printer, AlertTriangle, Download } from 'lucide-react';
+import { Printer, AlertTriangle, Download, Lock } from 'lucide-react';
+import { ProBadge } from '../Common/PlanComponents';
+import { canDo } from '../../utils/tiers';
 import './PrintReports.css';
 
-const PrintReports = ({ products, onExport, onExportSummary }) => {
+const PrintReports = ({ products, onExport, onExportSummary, profile }) => {
     const lowStockProducts = products.filter(p => p.stock <= p.minStock);
     const totalInventoryValue = products.reduce((sum, p) => 
     sum + (p.stock *(p.costPrice || 0)), 0
@@ -463,22 +465,28 @@ const PrintReports = ({ products, onExport, onExportSummary }) => {
             </ul>
           </div>
 
-          <div className="excel-buttons">
+          {canDo(profile, 'canExportExcel') ? (
+            <div className="excel-buttons">
+              <button className="btn-excel-modern" onClick={onExport}>
+                <Download size={18} /> Simple
+              </button>
+              <button className="btn-excel-modern" onClick={onExportSummary}>
+                <Download size={18} /> Complet
+              </button>
+            </div>
+          ) : (
             <button 
-              className="btn-excel-modern"
-              onClick={onExport}
+                onClick={() => alert('Export Excel disponible en Pro — contactez-nous sur WhatsApp')}
+              style={{
+                width: '100%', padding: '12px', border: '2px dashed var(--border)',
+                borderRadius: '10px', background: 'transparent', cursor: 'pointer',
+                color: 'var(--text-tertiary)', fontSize: '14px', fontWeight: '600',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
             >
-              <Download size={18} />
-              Simple
+              <Lock size={18} /> Export Excel — Pro <ProBadge />
             </button>
-            <button 
-              className="btn-excel-modern"
-              onClick={onExportSummary}
-            >
-              <Download size={18} />
-              Complet
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>

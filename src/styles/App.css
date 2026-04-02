@@ -159,6 +159,35 @@ body {
   background: var(--primary-light);
   color: var(--primary);
 }
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+  /* Fix: isolate header stacking context */
+  isolation: isolate;
+}
+ 
+/* Ensure bottom nav doesn't interfere */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 65px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+  z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  /* Fix: bottom nav should NOT be above menu overlay */
+  isolation: auto;
+}
 
 /* ========================================
    ADD PRODUCT BUTTON

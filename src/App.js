@@ -7,6 +7,9 @@ import AddProductModal from './components/Modals/AddProductModal';
 import BulkEditModal from './components/Modals/BulkEditModal';
 import ImageEditorModal from './components/Modals/ImageEditorModal';
 import BulkImportModal from './components/Modals/BulkImportModal';
+import WhatsAppSetupModal from './components/Common/WhatsAppSetupModal';
+import OnboardingEmptyState from './components/Common/OnboardingEmptyState';
+import { ProductLimitBanner, ProBadge, UpgradeModal } from './components/Common/PlanComponents';
 import './styles/App.css';
 import AnalyticsSummary from './components/Layout/AnalyticsSummary'; 
 import SearchBar from './components/Common/SearchBar';
@@ -14,7 +17,7 @@ import FilterButtons from './components/Common/FilterButtons';
 import {exportToExcel, exportSummaryReport} from './utils/exportToExcel'
 import SalesDashboard from './components/Layout/SalesDashboard';
 import TransactionHistory from './components/Layout/TransactionHistory'
-import SalesChart from './components/Layout/SalesChart';
+// import SalesChart from './components/Layout/SalesChart';
 import PrintReports from './components/Layout/PrintReports';
 import InstallPrompt from './components/Common/InstallPrompt';
 import OfflineIndicator from './components/Common/OfflineIndicator';
@@ -27,6 +30,7 @@ import HamburgerMenu from './components/Common/HamburgerMenu';
 import BottomNav from './components/Common/BottomNav';
 import { useTheme } from './hooks/useTheme';
 import './themes.css';
+import { isAtProductLimit, canDo, getProductLimit } from './utils/tiers';
 
 
 function App() {
@@ -163,7 +167,10 @@ React.useEffect(() => {
   const [sortBy, setSortBy] = useState('name');
   const [activeTab, setActiveTab] = useState('inventory');
   const [showAddWorkerModal, setShowAddWorkerModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -173,6 +180,16 @@ React.useEffect(() => {
     sellingPrice: '',
     images: ['', '', '', '']
   });
+
+  const requirePro = (feature, action) => {
+    if (!canDo(profile, feature)) {
+      setUpgradeFeature(feature);
+      setShowUpgradeModal(true);
+      return false;
+    }
+    action();
+    return true;
+  };
 
   const handleStockChange = (productId, action) => {
     if (action === 'bulk-decrease' || action === 'bulk-increase') {
@@ -201,7 +218,14 @@ React.useEffect(() => {
   };
 
   const handleAddProduct = async () => {
-    if (isAddingProduct) return; 
+  if (isAddingProduct) return;
+
+  // Plan limit check
+  if (isAtProductLimit(profile, products.length)) {
+    setUpgradeFeature('maxProducts');
+    setShowUpgradeModal(true);
+    return;
+  } 
 
     if (!formData.name.trim()) {
       alert('Entrez le nom du produit');
@@ -318,6 +342,11 @@ const handleBulkImport = async (products) => {
 
   // Export handlers
   const handleExport = () => {
+    if (!canDo(profile, 'canExportExcel')) {
+      setUpgradeFeature('canExportExcel');
+      setShowUpgradeModal(true);
+      return;
+    }
     try {
       const filename = exportToExcel(products);
       alert(`✓ Exporté: ${filename}`);
@@ -328,6 +357,11 @@ const handleBulkImport = async (products) => {
   };
 
   const handleExportSummary = () => {
+    if (!canDo(profile, 'canExportExcel')) {
+      setUpgradeFeature('canExportExcel');
+      setShowUpgradeModal(true);
+      return;
+    }
     try {
       const filename = exportSummaryReport(products);
       alert(`✓ Rapport exporté: ${filename}`);
@@ -350,8 +384,9 @@ const handleBulkImport = async (products) => {
       matchesFilter = product.stock > product.minStock;
     }
 
-    return matchesSearch && matchesFilter;
-  })
+    return matchesSearch && matchesFilter; 
+  });
+
 
   // Sort logic
   filteredProducts.sort((a, b) => {
@@ -385,38 +420,48 @@ const handleBulkImport = async (products) => {
 
           {/* Hamburger Menu */}
           <HamburgerMenu
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            userRole={profile?.role}
-            onAddWorker={() => setShowAddWorkerModal(true)}
-            onBulkImport={() => setShowBulkImportModal(true)}
-            onRestore={async () => {
-              if (window.confirm('Restaurer depuis le cloud? Cela remplacera les données locales.')) {
-                try {
-                  const result = await restoreFromSupabase();
-        
-                  if (result.success) {
-                    alert(`✓ ${result.productsCount} produits restaurés!`);
-                    window.location.reload();
-                  } else {
-                    alert('Erreur: ' + result.error);
-                  }
-                } catch (err) {
-                  console.error('Restore error:', err);
-                  alert('Erreur lors de la restauration');
-                }
-              }
-            }}
-
-            onLogout={async () => {
-              if (window.confirm('Se déconnecter?')) {
-                await signOut();
-                window.location.reload();
+          userRole={profile?.role}
+          onAddWorker={() => {
+            if (!canDo(profile, 'canAddWorkers')) {
+              setUpgradeFeature('canAddWorkers');
+              setShowUpgradeModal(true);
+              return;
             }
-            }}
-              theme={theme}
-              onThemeToggle={toggleTheme}
-          />
+            setShowAddWorkerModal(true);
+          }}
+          onBulkImport={() => {
+            if (!canDo(profile, 'canBulkImport')) {
+              setUpgradeFeature('canBulkImport');
+              setShowUpgradeModal(true);
+              return;
+            }
+            setShowBulkImportModal(true);
+          }}
+          onRestore={async () => {
+            if (window.confirm('Restaurer depuis le cloud? Cela remplacera les données locales.')) {
+              try {
+                const result = await restoreFromSupabase();
+                if (result.success) {
+                  alert(`✓ ${result.productsCount} produits restaurés!`);
+                  window.location.reload();
+                } else {
+                  alert('Erreur: ' + result.error);
+                }
+              } catch (err) {
+                alert('Erreur lors de la restauration');
+              }
+            }
+          }}
+          onLogout={async () => {
+            if (window.confirm('Se déconnecter?')) {
+              await signOut();
+              window.location.reload();
+            }
+          }}
+          theme={theme}
+          onThemeToggle={toggleTheme}
+          onWhatsAppSetup={() => setShowWhatsAppModal(true)}
+        />
 
           {/* App Title */}
           <div className="header-title">
@@ -465,55 +510,70 @@ const handleBulkImport = async (products) => {
       <div className='container'>
         {/* TAB 1: INVENTAIRE */}
         {activeTab === 'inventory' && (
-          <>
-            {products.length > 0 && <AnalyticsSummary products={products} />}
+  <>
+    {products.length === 0 ? (
+      // New onboarding state for brand new users
+      <OnboardingEmptyState
+        onAddProduct={() => setShowAddModal(true)}
+        userName={profile?.full_name}
+      />
+    ) : (
+      <>
+        <AnalyticsSummary products={products} />
 
-            {products.length > 0 && (
-              <>
-                <SearchBar 
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  onClear={() => setSearchQuery('')}
-                  sortBy={sortBy}
-                  onSortChange={setSortBy}
-                />
-                
-                <FilterButtons
-                  activeFilter={filterType}
-                  onChange={setFilterType}
-                  counts={{
-                    all: products.length,
-                    lowStock: products.filter(p => p.stock <= p.minStock).length,
-                    normal: products.filter(p => p.stock > p.minStock).length
-                  }}
-                />
-              </>
-            )}
+        {/* Product limit warning */}
+        <ProductLimitBanner
+          current={products.length}
+          max={getProductLimit(profile)}
+          onUpgrade={() => { setUpgradeFeature('maxProducts'); setShowUpgradeModal(true); }}
+        />
 
-            <div className='product-grid'>
-              {filteredProducts.length === 0 ? (
-                <div className='empty-state'>
-                  <Package size={64} strokeWidth={1} />
-                  <p>Aucun produit trouvé</p>
-                  <p className='empty-subtitle'>
-                    {searchQuery ? 'Essayez un autre terme de recherche' : 'Ajoutez votre premier produit'}
-                  </p>
-                </div>
-              ) : (
-                filteredProducts.map(product => (
-                  <CompactProductCard
-                    key={product.id}
-                    product={product}
-                    onStockChange={handleStockChange}
-                    onEdit={handleEditImages}
-                    onDelete={handleDeleteProduct}
-                    userRole={profile?.role}
-                  />
-                ))
-              )}
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onClear={() => setSearchQuery('')}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+        />
+ 
+        <FilterButtons
+          activeFilter={filterType}
+          onChange={setFilterType}
+          counts={{
+            all: products.length,
+            lowStock: products.filter(p => p.stock <= p.minStock).length,
+            normal: products.filter(p => p.stock > p.minStock).length
+          }}
+        />
+ 
+        <div className='product-grid'>
+          {filteredProducts.length === 0 ? (
+            <div className="empty-state">
+              <Package size={64} strokeWidth={1} />
+              <p>Aucun produit trouvé</p>
+              <p className="empty-subtitle">
+                {searchQuery
+                  ? 'Essayez un autre terme de recherche'
+                  : 'Ajoutez votre premier produit'}
+              </p>
             </div>
-          </>
-        )}
+          ) : (
+            filteredProducts.map(product => (
+              <CompactProductCard
+                key={product.id}
+                product={product}
+                onStockChange={handleStockChange}
+                onEdit={handleEditImages}
+                onDelete={handleDeleteProduct}
+                userRole={profile?.role}
+              />
+            ))
+          )}
+        </div>
+      </>
+    )}
+  </>
+)}
 
         {/* TAB 2: VENTES */}
         {activeTab === 'sales' && (
@@ -521,7 +581,7 @@ const handleBulkImport = async (products) => {
             {products.length > 0 ? (
               <>
                 <SalesDashboard products={products} />
-                <SalesChart products={products} />
+                {/* <SalesChart products={products} /> */}
               </>
             ) : (
               <div className='empty-state'>
@@ -557,6 +617,7 @@ const handleBulkImport = async (products) => {
                   products={products}
                   onExport={handleExport}
                   onExportSummary={handleExportSummary}
+                  profile={profile}
                 />
               ) : (
                 <div className='empty-state'>
@@ -585,6 +646,12 @@ const handleBulkImport = async (products) => {
         onSubmit={handleAddProduct}
         onImageUpload={handleImageUpload}
         isSubmitting={isAddingProduct}
+      />
+
+      <UpgradeModal
+        show={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature={upgradeFeature}
       />
 
       <BulkEditModal
@@ -618,6 +685,12 @@ const handleBulkImport = async (products) => {
         show={showBulkImportModal}
         onClose={() => setShowBulkImportModal(false)}
         onImport={handleBulkImport}
+      />
+
+      <WhatsAppSetupModal
+        show={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        userId={user?.id}
       />
 
       {/* BOTTOM NAVIGATION */}

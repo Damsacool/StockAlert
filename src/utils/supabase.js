@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://pucerhyphyzxmlprpspk.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1Y2VyaHlwaHl6eG1scHJwc3BrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MTU0MTcsImV4cCI6MjA4Njk5MTQxN30.pT-_86bhwdumxILHlRs_lfEoJXdWu4SEKo_m0Nx1PjI';
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 // Check BEFORE creating client
 if (!supabaseUrl || !supabaseAnonKey) {

@@ -314,42 +314,80 @@ class DatabaseManager {
     return new Promise((resolve, reject) => {
       const txn = this.db.transaction(['transactions'], 'readwrite');
       const store = txn.objectStore('transactions');
-      const request = store.add(transaction);
+
+      // The local record with all fields
+      const localRecord = {
+        productId: transaction.productId,
+        productName: transaction.productName,
+        type: transaction.type,
+        quantity: transaction.quantity,
+        oldStock: transaction.oldStock,
+        newStock: transaction.newStock,
+        date: transaction.date || new Date().toISOString(),
+        timestamp: transaction.timestamp || Date.now(),
+      };
+
+      const request = store.add(localRecord);
 
       request.onsuccess = async () => {
-        console.log('Transaction logged');
-        
-        // Try to sync to Supabase
-        try {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          const { error } = await supabase
-            .from('transactions')
-            .insert([{
+        // Try to sync to Supabase immediately if online
+        if (navigator.onLine) {
+          try {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+            // Get tenant_id from user profile
+            const { data: profileData } = await supabase
+              .from('user_profiles')
+              .select('tenant_id')
+              .eq('id', currentUser?.id)
+              .single();
+
+            const tenantId = profileData?.tenant_id || currentUser?.id;
+
+            const { error } = await supabase
+              .from('transactions')
+              .insert([{
+                productId: transaction.productId,
+                productName: transaction.productName,
+                type: transaction.type,
+                quantity: transaction.quantity,
+                oldStock: transaction.oldStock,
+                newStock: transaction.newStock,
+                date: transaction.date || new Date().toISOString(),
+                created_by: currentUser?.id,
+                tenant_id: tenantId,   
+              }]);
+
+            if (error) throw error;
+            console.log('Transaction synced to Supabase');
+          } catch (err) {
+            console.log('Transaction sync queued:', err.message);
+            await addToSyncQueue('ADD_TRANSACTION', {
               productId: transaction.productId,
               productName: transaction.productName,
               type: transaction.type,
               quantity: transaction.quantity,
-              created_by: currentUser?.id
-        }]);
-          
-          if (error) throw error;
-          console.log('Transaction synced to Supabase!');
-        } catch (err) {
-          console.error('Transaction sync failed, adding to queue:', err.message);
-          // Add to queue for later sync
+              oldStock: transaction.oldStock,
+              newStock: transaction.newStock,
+              date: transaction.date || new Date().toISOString(),
+            });
+          }
+        } else {
           await addToSyncQueue('ADD_TRANSACTION', {
             productId: transaction.productId,
             productName: transaction.productName,
             type: transaction.type,
-            quantity: transaction.quantity
+            quantity: transaction.quantity,
+            oldStock: transaction.oldStock,
+            newStock: transaction.newStock,
+            date: transaction.date || new Date().toISOString(),
           });
         }
-        
-        resolve(transaction);
+
+        resolve(localRecord);
       };
 
       request.onerror = () => {
-        console.error('Failed to log transaction');
         reject(new Error('Failed to log transaction'));
       };
     });
@@ -509,73 +547,102 @@ export const markAsSynced = async (db, queueId) => {
   });
 };
 
+
 export const processSyncQueue = async () => {
   try {
     const queue = await getSyncQueue();
-    
+
     if (queue.length === 0) {
       return { success: true, synced: 0 };
     }
-    
+
     console.log(`Syncing ${queue.length} offline changes...`);
-    
+
+    // Get current user + tenant_id once before the loop
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      console.log('Not authenticated, skipping sync');
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const { data: profileData } = await supabase
+      .from('user_profiles')
+      .select('tenant_id')
+      .eq('id', currentUser.id)
+      .single();
+
+    const tenantId = profileData?.tenant_id || currentUser.id;
+
     const db = await dbManager.init();
     let synced = 0;
-    
+
     for (const item of queue) {
       try {
         let result;
-        
+
         switch (item.action) {
           case 'ADD_PRODUCT':
-            const { data: { user: addUser } } = await supabase.auth.getUser();
             result = await supabase.from('products').insert([{
-              ...item.data, 
-              created_by: addUser?.id,
-              updated_by: addUser?.id
+              ...item.data,
+              created_by: currentUser.id,
+              updated_by: currentUser.id,
+              tenant_id: tenantId,
             }]);
             break;
+
           case 'UPDATE_PRODUCT':
-            const { data: { user: updateUser } } = await supabase.auth.getUser();
             result = await supabase.from('products').update({
               ...item.data.updates,
-              updated_by: updateUser?.id,
-              updated_at: new Date().toISOString()
+              updated_by: currentUser.id,
+              updated_at: new Date().toISOString(),
             }).eq('id', item.data.id);
             break;
+
           case 'DELETE_PRODUCT':
             result = await supabase.from('products').delete().eq('id', item.data.id);
             break;
+
           case 'ADD_TRANSACTION':
-            const { data: { user: txUser } } = await supabase.auth.getUser();
             result = await supabase.from('transactions').insert([{
-            ...item.data,
-            created_by: txUser?.id
-          }]);
+              productId: item.data.productId,
+              productName: item.data.productName,
+              type: item.data.type,
+              quantity: item.data.quantity,
+              oldStock: item.data.oldStock,
+              newStock: item.data.newStock,
+              date: item.data.date || new Date().toISOString(),
+              created_by: currentUser.id,
+              tenant_id: tenantId,
+            }]);
             break;
 
-            default:
-              console.warn('Unknown sync action:', item.action);
-              continue;
+          default:
+            console.warn('Unknown sync action:', item.action);
+            // Remove unknown actions from queue so they don't block forever
+            await markAsSynced(db, item.id);
+            continue;
         }
-        
+
         if (result.error) {
-          if (result.error.code === '23505' || result.error.message.includes('duplicate')) {
-            // console.log(`Item ${item.id} already synced, removing from queue`);
+          // Duplicate = already synced, remove from queue
+          if (result.error.code === '23505' || result.error.message?.includes('duplicate')) {
+            await markAsSynced(db, item.id);
+            synced++;
           } else {
-            throw result.error;
+            console.error(`Sync failed for item ${item.id}:`, result.error.message);
+            // Don't remove from queue — will retry next time
           }
+        } else {
+          await markAsSynced(db, item.id);
+          synced++;
         }
-        
-        await markAsSynced(db, item.id);
-        synced++;
       } catch (err) {
-        console.error(`Failed to sync item ${item.id}:`, err.message);
+        console.error(`Sync error for item ${item.id}:`, err.message);
       }
     }
-    
-    if (synced > 0) {  
-    console.log(`Synced ${synced} changes to cloud`);
+
+    if (synced > 0) {
+      console.log(`✓ Synced ${synced} changes to cloud`);
     }
 
     return { success: true, synced };
