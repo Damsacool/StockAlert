@@ -1,70 +1,129 @@
-# Getting Started with Create React App
+# StockAlert
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A simple, offline-first inventory management app built for MSMEs.
 
-## Available Scripts
+## What is StockAlert?
 
-In the project directory, you can run:
+StockAlert is a web and mobile-first inventory system that helps small business owners track product stock easily. It doesn't need internet or complicated setup. Just add your products, take photos, and track your inventory.
 
-### `npm start`
+Built for real-world use: My father's auto parts shop in Abidjan, Côte d'Ivoire.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## The Problem It Solves
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Small business owners in markets lose money because they:
+- Don't know when stock runs low
+- Can't quickly check inventory on the go
+- Struggle with complex spreadsheets or pen and paper
 
-### `npm test`
+StockAlert fixes this with a simple mobile app that works even without internet.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Key Features
 
-### `npm run build`
+**Store and Track Products**
+- Add products with name, cost, and minimum stock level
+- Upload up to 4 photos per product (from camera or gallery)
+- Set alerts for low stock items
+- See products in a clean grid view
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+**Quick Stock Updates**
+- Increase or decrease stock with simple buttons
+- Bulk add/remove stock when restocking items
+- Visual alerts when stock gets too low (red borders)
+- Easy product search and filtering
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+**Works Offline**
+- All data saved on your phone
+- Works without internet connection
+- Automatic sync when online
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+**Simple Design**
+- No confusing buttons or menus
+- Mobile responsive and fast
+- Easy navigation
+- Clear visual feedback
 
-### `npm run eject`
+## Tech Stack
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- React 
+- IndexedDB for offline storage
+- Supabase for backend features
+- Recharts for analytics
+- Lucide icons for the UI
+- XLSX for exporting data
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Get Started
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+1. Clone the repository
+```
+git clone https://github.com/yourusername/stockalert.git
+cd stockalert
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+2. Install dependencies
+```
+npm install
+```
 
-## Learn More
+3. Start the app
+```
+npm start
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Open http://localhost:3000 in your browser.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Build for Production
 
-### Code Splitting
+```
+npm run build
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Project Status
 
-### Analyzing the Bundle Size
+**Core Features: Working**
+- Product management
+- Stock tracking
+- Image storage and zoom
+- Offline functionality
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+**In Progress**
+- Pricing system (cost and selling price)
+- Better search and filters
+- Bulk image upload
+- Export reports to Excel
 
-### Making a Progressive Web App
+**Known Issues**
+- Some bugs with image handling (being fixed)
+- Bulk edit feature needs improvements
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Skills Demonstrated
 
-### Advanced Configuration
+**Frontend Development**
+- React hooks and state management
+- Component-based architecture
+- Responsive design
+- Real-time data validation
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+**Offline-First Architecture**
+- IndexedDB for local storage
+- Handling offline and online modes
+- Data persistence
 
-### Deployment
+**Problem Solving**
+- Built for real-world business needs
+- Accessibility for non-technical users
+- Mobile optimization
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Why I Built This
 
-### `npm run build` fails to minify
+This project started as a solution to help my father manage his business better. I realized that not everyone has fancy point-of-sale systems or understands complex software. This app is proof that good design can make technology accessible to anyone, and that you can build something valuable by listening to real user needs.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Next Steps
+
+Want to help improve StockAlert? Feel free to:
+- Test the app and report bugs
+- Suggest new features
+- Fork and contribute code
+
+## Questions?
+
+Feel free to reach out. I'm always happy to discuss the project, technology choices, or how to adapt it for different businesses.
