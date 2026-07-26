@@ -47,7 +47,7 @@ StockAlert fixes this with a simple mobile app that works even without internet.
 - React 
 - IndexedDB for offline storage
 - Supabase for backend features
-- Recharts for analytics
+- Recharts for analyticsng of properl
 - Lucide icons for the UI
 - XLSX for exporting data
 

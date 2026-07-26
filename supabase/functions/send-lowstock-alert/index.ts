@@ -11,81 +11,158 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get all owner profiles that have a WhatsApp number configured
-    const { data: profiles, error: profilesError } = await supabase
+    // Get all owners with email alerts enabled
+    const { data: owners, error: ownersError } = await supabaseAdmin
       .from('user_profiles')
-      .select('id, full_name, tenant_id, whatsapp_number, callmebot_apikey')
+      .select('id, email, full_name, tenant_id, email_alerts_enabled')
       .eq('role', 'owner')
-      .not('whatsapp_number', 'is', null)
-      .not('callmebot_apikey', 'is', null);
+      .eq('email_alerts_enabled', true);
 
-    if (profilesError) throw profilesError;
+    if (ownersError) throw ownersError;
 
-    console.log(`Found ${profiles?.length ?? 0} owners with WhatsApp configured`);
-
+    console.log(`Processing ${owners?.length ?? 0} owners`);
     const results = [];
 
-    for (const profile of profiles ?? []) {
-      // Get low stock products for this tenant
-      const { data: lowProducts, error: lowError } = await supabase
+    for (const owner of owners ?? []) {
+      // Get low stock products for this owner's tenant
+      const { data: allProducts } = await supabaseAdmin
         .from('products')
         .select('name, stock, "minStock", category')
-        .eq('tenant_id', profile.tenant_id);
+        .eq('tenant_id', owner.tenant_id);
 
-      if (lowError) {
-        console.error(`Error fetching products for ${profile.id}:`, lowError);
+      const lowStock = (allProducts ?? []).filter((p: any) => p.stock <= p.minStock);
+
+      if (lowStock.length === 0) {
+        results.push({ owner: owner.email, status: 'no_alerts_needed' });
         continue;
       }
 
-      // Filter in JS since Supabase doesn't support column-to-column comparison
-      const alerts = (lowProducts ?? []).filter((p: { stock: number; minStock: number }) => p.stock <= p.minStock);
+      // Build email HTML
+      const productRows = lowStock.map((p: any) => `
+        <tr>
+          <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;font-size:14px;color:#1e293b">
+            ${p.name}${p.category ? ` <span style="font-size:12px;color:#64748b">(${p.category})</span>` : ''}
+          </td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;text-align:center">
+            <span style="background:#fee2e2;color:#ef4444;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:700">
+              ${p.stock} restants
+            </span>
+          </td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:13px;color:#64748b">
+            Min: ${p.minStock}
+          </td>
+        </tr>
+      `).join('');
 
-      if (alerts.length === 0) {
-        console.log(`No low stock for tenant ${profile.tenant_id}`);
+      const firstName = owner.full_name?.split(' ')[0] || 'cher utilisateur';
+
+      const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="max-width:560px;margin:0 auto;padding:32px 16px">
+
+    <!-- Header -->
+    <div style="background:#2563eb;border-radius:16px 16px 0 0;padding:24px 28px;text-align:center">
+      <h1 style="margin:0;color:white;font-size:22px;font-weight:800;letter-spacing:-0.5px">
+        StockAlert
+      </h1>
+      <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:14px">
+        Alerte stock bas — ${new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long'})}
+      </p>
+    </div>
+
+    <!-- Body -->
+    <div style="background:white;border-radius:0 0 16px 16px;padding:28px;border:1px solid #e2e8f0;border-top:none">
+
+      <p style="margin:0 0 6px;font-size:16px;color:#0f172a">
+        Bonjour <strong>${firstName}</strong>,
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6">
+        <strong style="color:#ef4444">${lowStock.length} produit${lowStock.length > 1 ? 's' : ''}</strong>
+        ${lowStock.length > 1 ? 'ont besoin' : 'a besoin'} d'être réapprovisionné${lowStock.length > 1 ? 's' : ''} :
+      </p>
+
+      <!-- Products table -->
+      <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="padding:10px 16px;text-align:left;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Produit</th>
+            <th style="padding:10px 16px;text-align:center;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Stock</th>
+            <th style="padding:10px 16px;text-align:center;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Seuil</th>
+          </tr>
+        </thead>
+        <tbody>${productRows}</tbody>
+      </table>
+
+      <!-- CTA -->
+      <div style="text-align:center;margin-top:28px">
+        <a href="https://stockalert-tawny.vercel.app"
+          style="display:inline-block;padding:14px 32px;background:#2563eb;color:white;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">
+          Mettre à jour mon stock
+        </a>
+      </div>
+
+      <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;text-align:center;line-height:1.6">
+        Vous recevez cet email parce que vous avez activé les alertes sur StockAlert.<br/>
+        Cet email est envoyé automatiquement chaque soir à 18h si du stock est bas.
+      </p>
+    </div>
+
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:#94a3b8">
+      © ${new Date().getFullYear()} StockAlert · Abidjan, Côte d'Ivoire
+    </p>
+  </div>
+</body>
+</html>`;
+
+      // Send email using Resend
+      const resendApiKey = Deno.env.get('RESEND_API_KEY');
+
+      if (!resendApiKey) {
+        console.log('No RESEND_API_KEY — set it in Edge Function secrets');
+        results.push({ owner: owner.email, status: 'no_email_service_configured' });
         continue;
       }
 
-      // Build the WhatsApp message
-      const productList = alerts
-        .map((p: { name: string; category?: string; stock: number }) => `• ${p.name}${p.category ? ` (${p.category})` : ''}: ${p.stock} restants`)
-        .join('\n');
+      const emailResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'StockAlert <alerts@yourdomain.com>',
+          to: [owner.email],
+          subject: `⚠️ ${lowStock.length} produit${lowStock.length > 1 ? 's' : ''} en stock bas — StockAlert`,
+          html: emailHtml,
+        }),
+      });
 
-      const message = `⚠️ *STOCKALERT - Stock Bas*\n\n${alerts.length} produit(s) à réapprovisionner:\n\n${productList}\n\n_Reconnectez-vous sur StockAlert pour mettre à jour votre stock._`;
-
-      // URL encode the message for CallMeBot
-      const encodedMessage = encodeURIComponent(message);
-      const callMeBotUrl = `https://api.callmebot.com/whatsapp.php?phone=${profile.whatsapp_number}&text=${encodedMessage}&apikey=${profile.callmebot_apikey}`;
-
-      // Send via CallMeBot
-      const whatsappResponse = await fetch(callMeBotUrl);
-      const responseText = await whatsappResponse.text();
-
-      console.log(`WhatsApp sent to ${profile.whatsapp_number}: ${whatsappResponse.status}`);
-
+      const emailResult = await emailResponse.json();
       results.push({
-        owner: profile.id,
-        phone: profile.whatsapp_number,
-        alertCount: alerts.length,
-        status: whatsappResponse.ok ? 'sent' : 'failed',
-        response: responseText,
+        owner: owner.email,
+        products: lowStock.length,
+        status: emailResponse.ok ? 'sent' : 'failed',
+        error: emailResult.message,
       });
     }
 
     return new Response(
-      JSON.stringify({ success: true, results }),
+      JSON.stringify({ success: true, processed: results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
-    console.error('Edge function error:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+  } catch (error: any) {
+    console.error('Email alerts error:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
